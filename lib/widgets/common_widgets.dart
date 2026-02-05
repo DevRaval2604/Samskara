@@ -183,7 +183,7 @@ class PrimaryButton extends StatelessWidget {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
-        child: Text(text, style: TextStyle(fontSize: size.width * 0.045)),
+        child: Text(text, style: TextStyle(color: backgroundColor, fontSize: size.width * 0.045)),
       ),
     );
   }
