@@ -74,8 +74,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!RegExp(
-            r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+\.[a-zA-Z]+")
-        .hasMatch(email)) {
+      r"^[\w\.\+\-]+@([\w-]+\.)+[a-zA-Z]{2,}$")
+      .hasMatch(email)) {
       _emailShakeKey.currentState?.shake();
       _showError("Please enter a valid email address.");
       return;
@@ -140,22 +140,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        await user.sendEmailVerification();
         await user.updateDisplayName(name);
 
         await FirebaseFirestore.instance.collection('Users').doc(user.uid).set({
           'Name': name,
           'Email': email,
         });
+        await user.reload();
+        await user.sendEmailVerification();
 
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) => const LoginScreen(
+            PageRouteBuilder(
+              transitionDuration: const Duration(milliseconds: 200),
+              pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(
                 postRegistrationMessage:
                     "Registration successful! Please check your email to verify your account.",
               ),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut, // Fast entry for the success message
+                  ),
+                  child: child,
+                );
+              },
             ),
           );
         }
@@ -281,16 +292,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onTap: () => Navigator.pushReplacement(
                               context,
                               PageRouteBuilder(
-                                transitionDuration:
-                                    const Duration(milliseconds: 200),
-                                pageBuilder: (_, _, _) =>
-                                    const LoginScreen(),
-                                transitionsBuilder:
-                                    (_, animation, _, child) =>
-                                        FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                ),
+                                transitionDuration: const Duration(milliseconds: 200),
+                                pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(
+                                    opacity: CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.easeOut, // Makes the 200ms feel snappier
+                                    ),
+                                    child: child,
+                                  );
+                                },
                               ),
                             ),
                             child: Text(

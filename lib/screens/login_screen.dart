@@ -81,8 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     if (!RegExp(
-            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-        .hasMatch(email)) {
+      r"^[\w\.\+\-]+@([\w-]+\.)+[a-zA-Z]{2,}$")
+      .hasMatch(email)) {
       _emailShakeKey.currentState?.shake();
       _showError("Please enter a valid email address.");
       return;
@@ -103,14 +103,42 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
-      if (mounted) {
-        if (userCredential.user != null && !userCredential.user!.emailVerified) {
-          _showError("Please verify your email to login.");
-          await FirebaseAuth.instance.signOut();
-        } else {
-          Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeScreen()));
+      final user = userCredential.user;
+
+      if (user != null) {
+        await user.reload();
+        if (!mounted) return;
+
+        final refreshedUser = FirebaseAuth.instance.currentUser;
+
+        if (refreshedUser != null) {
+          // Check if they have Google linked
+          bool isGoogleUser = refreshedUser.providerData.any((p) => p.providerId == 'google.com');
+
+          // EDGE CASE FIX: Only block if NOT verified AND NOT a Google user
+          if (!refreshedUser.emailVerified && !isGoogleUser) {
+            _showError("Please verify your email to login.");
+            await FirebaseAuth.instance.signOut();
+            return;
+          }
         }
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 200),
+            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut, // Starts fast to feel responsive
+                ),
+                child: child,
+              );
+            },
+          ),
+        );
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = "Login failed. Please check your credentials.";
@@ -173,7 +201,20 @@ class _LoginScreenState extends State<LoginScreen> {
       // On success, navigate to home screen.
       if (mounted) {
         Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()));
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 200),
+            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut, // Starts fast to feel responsive
+                ),
+                child: child,
+              );
+            },
+          ),
+        );
       }
     } catch (e) {
       // This will catch errors from GoogleSignIn().signIn() or signInWithCredential()
@@ -342,19 +383,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontSize: screenWidth * 0.04,
                                     color: primaryColor)),
                             GestureDetector(
-                              onTap: () => Navigator.pushReplacement(
-                                context,
-                                PageRouteBuilder(
-                                  transitionDuration:
-                                      const Duration(milliseconds: 200),
-                                  pageBuilder: (_, _, _) =>
-                                      const RegisterScreen(),
-                                  transitionsBuilder:
-                                      (_, animation, _, child) =>
-                                          FadeTransition(
-                                              opacity: animation, child: child),
-                                ),
-                              ),
+                              onTap: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  PageRouteBuilder(
+                                    transitionDuration: const Duration(milliseconds: 200),
+                                    // For a replacement switch, we don't need a reverse duration 
+                                    // because the old screen is being destroyed immediately.
+                                    pageBuilder: (context, animation, secondaryAnimation) => const RegisterScreen(),
+                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                      return FadeTransition(
+                                        // Use easeOut for a 'quick start' feel on the new screen
+                                        opacity: CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOut,
+                                        ),
+                                        child: child,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
                               child: Text("Create an account",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,

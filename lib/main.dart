@@ -10,6 +10,10 @@ void main() async {
   runApp(const MyApp());
 }
 
+// Define your colors here so they are accessible
+const Color primaryColor = Color(0xFF6B3C3A);
+const Color backgroundColor = Color(0xFFFDF5E6); // Replace with your exact cream color
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -20,28 +24,35 @@ class MyApp extends StatelessWidget {
       title: 'Samskara UI',
       theme: ThemeData(
         fontFamily: 'Sans-Serif',
-        primaryColor: const Color(0xFF6B3C3A),
+        primaryColor: primaryColor,
+        scaffoldBackgroundColor: backgroundColor, // <--- SET THIS
+        canvasColor: backgroundColor,             // <--- SET THIS
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryColor,
+          surface: backgroundColor,               // <--- SET THIS
+        ),
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
+          // While checking auth state, don't show a white screen
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+              backgroundColor: backgroundColor, // Ensure this is themed
+              body: Center(
+                child: CircularProgressIndicator(color: primaryColor),
+              ),
             );
           }
 
           if (snapshot.hasData) {
-            // ✅ User is logged in
             return const HomeScreen();
           }
 
-          // ❌ User is NOT logged in
           return const LoginScreen();
         },
       ),
     );
   }
 }
-

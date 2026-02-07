@@ -111,19 +111,46 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
+        backgroundColor: Colors.transparent, // Keeps it transparent at rest
+        elevation: 0, 
+        scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: Text(titles[_selectedIndex], style: TextStyle(color: primaryColor, fontSize: screenWidth * 0.06, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           GestureDetector(
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              // Replaced MaterialPageRoute with PageRouteBuilder for a consistent, curved fade effect
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  transitionDuration: const Duration(milliseconds: 200),
+                  reverseTransitionDuration: const Duration(milliseconds: 200),
+                  pageBuilder: (context, animation, secondaryAnimation) => const ProfileScreen(),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    // Applying the 'Perfect' curve to the 200ms duration
+                    final curvedAnimation = CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,         // Fast start for opening
+                      reverseCurve: Curves.easeIn,   // Fast end for closing
+                    );
+
+                    return FadeTransition(
+                      opacity: curvedAnimation,
+                      child: child,
+                    );
+                  },
+                ),
+              );
             },
             child: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.04),
-              child: InitialsAvatar(radius: screenWidth * 0.055, fontSize: screenWidth * 0.045, name: _userName), 
+              child: InitialsAvatar(
+                radius: screenWidth * 0.055, 
+                fontSize: screenWidth * 0.045, 
+                name: _userName,
+              ), 
             ),
           ),
         ],

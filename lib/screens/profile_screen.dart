@@ -103,21 +103,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _signOut() async {
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await _auth.signOut();
-      await _googleSignIn.signOut();
-      if (!mounted) return;
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (Route<dynamic> route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Error signing out: ${e.toString()}')));
-    }
+  final navigator = Navigator.of(context);
+  try {
+    // 1. Sign out 
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+    
+    if (!mounted) return;
+
+    // 2. Use a 0ms transition or a very fast 100ms fade
+    // This prevents the 'double animation' glitch
+    navigator.pushAndRemoveUntil(
+      PageRouteBuilder(
+        transitionDuration: Duration.zero, // Instant swap
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+      ),
+      (Route<dynamic> route) => false,
+    );
+  } catch (e) {
+    debugPrint('Error: $e');
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: sh * 0.05),
+                SizedBox(height: sh * 0.04),
               ],
             ),
           );
