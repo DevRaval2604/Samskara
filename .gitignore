@@ -46,3 +46,6 @@ app.*.map.json
 
 #Firebase config(DO NOT COMMIT)
 ios/Runner/GoogleService-Info.plist
+
+# Secrets and API Keys
+.env

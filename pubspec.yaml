@@ -16,6 +16,8 @@ dependencies:
   google_sign_in: ^6.2.1
   shared_preferences: ^2.5.4
   url_launcher: ^6.3.2
+  google_generative_ai: ^0.4.7
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_native_splash: ^2.4.7
@@ -31,6 +33,7 @@ flutter:
     - assets/Logo.PNG
     - assets/Splash.PNG
     - assets/google_logo.png
+    - .env
 
 flutter_native_splash:
   color: "#F8F4E9"

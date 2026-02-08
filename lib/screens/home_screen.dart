@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
 import '../widgets/common_widgets.dart';
-import 'festivecalendar_screen.dart';
+import 'festivelist_screen.dart';
 import 'storiesofindia_screen.dart';
 import 'askthegita_screen.dart';
 import 'settings_screen.dart';
@@ -94,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> pages = [
       _HomeTab(isLoading: _isLoading, userName: _userName, screenWidth: screenWidth),
-      const FestiveCalendarScreen(),
+      const FestiveListScreen(),
       const StoriesOfIndiaScreen(),
       const AskTheGitaScreen(),
       const SettingsScreen(),
@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<String> titles = [
       "Home",
-      "Festive Calendar",
+      "Festive List",
       "Stories of India",
       "Ask the Gita",
       "Settings",
@@ -174,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
           indicatorColor: primaryColor.withValues(alpha: 0.2),
           destinations: const [
             NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-            NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Calendar'),
+            NavigationDestination(icon: Icon(Icons.festival_outlined), selectedIcon: Icon(Icons.festival), label: 'Festivals'),
             NavigationDestination(icon: Icon(Icons.auto_stories_outlined), selectedIcon: Icon(Icons.auto_stories), label: 'Stories'),
-            NavigationDestination(icon: Icon(Icons.psychology_outlined), selectedIcon: Icon(Icons.psychology), label: 'Gita'),
+            NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Gita'),
             NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
           ],
         ),
