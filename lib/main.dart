@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'utils/festivalscript.dart'; // Import the script to populate the database
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,8 @@ void main() async {
     debugPrint("Warning: .env file not found. Ensure it is in root and added to pubspec.yaml assets.");
   }
   await Firebase.initializeApp();
+  // Run the script once
+  await populateEncylopeadicFestivals();
   runApp(const MyApp());
 }
 

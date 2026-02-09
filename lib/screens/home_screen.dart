@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<String> titles = [
       "Home",
-      "Festive List",
+      "Indian Festivals",
       "Stories of India",
       "Ask the Gita",
       "Settings",

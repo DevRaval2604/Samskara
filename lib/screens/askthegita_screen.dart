@@ -16,6 +16,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   
   String? _shlok;
   String? _translation;
+  String? _verseRef;
   String? _interpretation;
   String? _simpleResponse;
 
@@ -41,6 +42,27 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     ));
   }
 
+  String _sanitizeGeminiOutput(String rawText) {
+    return rawText
+      // 1. Remove Markdown Bold (**), Italics (_ or *), and Headers (###)
+      .replaceAll(RegExp(r'\*\*|__|_|###'), '')
+      
+      // 2. Remove any kind of bullet point at the start of lines (*, -, + or numbers like 1.)
+      .replaceAll(RegExp(r'^\s*([\*\-\+]|\d+\.)\s+', multiLine: true), '')
+      
+      // 3. Remove leading/trailing decorative quotation marks
+      .replaceAll(RegExp(r'^["\u201C]|["\u201D]$'), '')
+      
+      // 4. Replace all newlines/tabs with a single space (forces a flat paragraph)
+      .replaceAll(RegExp(r'[\n\r\t]+'), ' ')
+      
+      // 5. Collapse multiple spaces into one single space
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      
+      // 6. Final trim for any stray whitespace at the ends
+      .trim();
+    }
+
   bool _isAppropriate(String query) {
     final forbidden = ['hate', 'violence', 'abuse', 'kill', 'suicide', 'illegal', 'sex'];
     return !forbidden.any((word) => query.toLowerCase().contains(word));
@@ -65,6 +87,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     setState(() {
       _shlok = null;
       _translation = null;
+      _verseRef = null;
       _interpretation = null;
       _simpleResponse = null;
     });
@@ -108,6 +131,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
             1. If the input appears to be gibberish, random keystrokes, or meaningless (e.g., "asdf", "sdhsh", "jkl"), reply gently asking the user to express their thought clearly.
             2. If the input is a greeting, a single word, or a short phrase with clear meaning (e.g., "hi", "sorry", "weird", "anger", "help"), reply warmly and wisely in plain text. Offer a brief thought or ask the user to elaborate. Do not use any tags.
             3. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
+            [REFERENCE] Adhyay X, Shlok Y
             [SHLOK] (The Sanskrit Verse)
             [TRANSLATION] (The English Translation)
             [PRACTICAL] (Practical, simple modern-day guidance)
@@ -138,12 +162,13 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     if (resultText != null) {
       setState(() {
         if (resultText!.contains("[SHLOK]")) {
+          _verseRef = _parseSection(resultText, "[REFERENCE]");
           _shlok = _parseSection(resultText, "[SHLOK]");
           _translation = _parseSection(resultText, "[TRANSLATION]");
           _interpretation = _parseSection(resultText, "[PRACTICAL]");
           _simpleResponse = null;
         } else {
-          _simpleResponse = resultText.replaceAll('*', '').trim();
+          _simpleResponse = _sanitizeGeminiOutput(resultText);
         }
       });
     } else if (capturedException != null) {
@@ -165,7 +190,8 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     if (!text.contains(tag)) return "";
     var split = text.split(tag);
     final content = split[1].split('[').first.trim();
-    return content.replaceAll('*', '').trim();
+    // Apply the full-proof sanitizer here
+    return _sanitizeGeminiOutput(content);
   }
 
   @override
@@ -237,6 +263,9 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
 
               if (_shlok != null) ...[
                 SizedBox(height: sh * 0.04),
+                // New Card for the Verse Reference (Adhyay & Number)
+              if (_verseRef != null) 
+                _buildWisdomCard("Gita Adhyay & Shlok", _verseRef!, sw, sh),
                 _buildWisdomCard("Sacred Shlok", _shlok!, sw, sh, isSanskrit: true),
                 _buildWisdomCard("Translation", _translation!, sw, sh),
                 _buildWisdomCard("Practical Guidance", _interpretation!, sw, sh, isJustified: true),
