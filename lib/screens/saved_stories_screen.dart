@@ -1,34 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/common_widgets.dart'; 
 import 'stories_of_india_detail_screen.dart';
-import '../widgets/common_widgets.dart';
 
-class StoriesOfIndiaScreen extends StatefulWidget {
-  const StoriesOfIndiaScreen({super.key});
+class SavedStoriesScreen extends StatefulWidget {
+  const SavedStoriesScreen({super.key});
 
   @override
-  State<StoriesOfIndiaScreen> createState() => _StoriesOfIndiaScreenState();
+  State<SavedStoriesScreen> createState() => _SavedStoriesScreenState();
 }
 
-class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
-  // Filters
-  String _selectedRegion = 'All';
-  String _selectedCategory = 'All';
-  final List<String> _regions = ['All', 'North', 'South', 'East', 'West', 'Central'];
-  final List<String> _categories = ['All', 'Rulers', 'Freedom Fighters', 'Battles', 'Forgotten Heroes', 'Ancient Science', 'Scholars'];
-
-  // Pagination Logic (Exact from Reference)
+class _SavedStoriesScreenState extends State<SavedStoriesScreen> {
+  // Pagination Logic
   int _currentPage = 1;
   final int _itemsPerPage = 5;
   bool _isLoading = false;
   bool _hasNextPage = false; 
   
-  List<DocumentSnapshot> _stories = [];
+  List<DocumentSnapshot> _savedStories = [];
   DocumentSnapshot? _lastDocument;
   final Map<int, DocumentSnapshot?> _pageHistory = {1: null}; 
 
-  // Search Logic (Exact from Reference)
+  // Search Logic (Integrated)
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
   Timer? _debounce;
@@ -36,7 +31,7 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchStories(isInitial: true);
+    _fetchSavedStories(isInitial: true);
   }
 
   @override
@@ -46,26 +41,19 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchStories({bool isNext = false, bool isInitial = false}) async {
-    if (_isLoading) return;
+  Future<void> _fetchSavedStories({bool isNext = false, bool isInitial = false}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || _isLoading) return;
     if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      // Order by 'title' for stories
-      Query query = FirebaseFirestore.instance.collection('Stories').orderBy('Title');
+      Query query = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .collection('SavedStories')
+          .orderBy('Title'); 
 
-      // Region Filter
-      if (_selectedRegion != 'All') {
-        query = query.where('Region', isEqualTo: _selectedRegion);
-      }
-
-      // Category Filter
-      if (_selectedCategory != 'All') {
-        query = query.where('Category', isEqualTo: _selectedCategory);
-      }
-
-      // Search Formatting (Exact from Reference)
       if (_searchQuery.isNotEmpty) {
         String input = _searchQuery.trim().toLowerCase();
         String searchFormatted = input[0].toUpperCase() + input.substring(1);
@@ -93,16 +81,16 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
         final allDocs = querySnapshot.docs;
         if (allDocs.length > _itemsPerPage) {
           _hasNextPage = true;
-          _stories = allDocs.sublist(0, _itemsPerPage);
+          _savedStories = allDocs.sublist(0, _itemsPerPage);
         } else {
           _hasNextPage = false;
-          _stories = allDocs;
+          _savedStories = allDocs;
         }
 
-        if (_stories.isNotEmpty) {
-          _lastDocument = _stories.last;
+        if (_savedStories.isNotEmpty) {
+          _lastDocument = _savedStories.last;
           if (isNext) {
-            _pageHistory[_currentPage] = _stories.first;
+            _pageHistory[_currentPage] = _savedStories.first;
           }
         }
         _isLoading = false;
@@ -124,7 +112,7 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
         _pageHistory.clear();
         _pageHistory[1] = null;
       });
-      _fetchStories(isInitial: true);
+      _fetchSavedStories(isInitial: true);
     });
   }
 
@@ -133,47 +121,58 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
     final mq = MediaQuery.sizeOf(context);
     final sw = mq.width;
     final sh = mq.height;
-    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          "My Legacy Collection",
+          style: TextStyle(
+            color: primaryColor,
+            fontFamily: 'Serif',
+            fontWeight: FontWeight.bold,
+            fontSize: sw * 0.06,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: primaryColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Column(
         children: [
-          SizedBox(height: topPadding + sh * 0.02),
-          // Search
           _buildSearchBar(sw, sh),
-          // Filters
-          _buildFilterBar(_regions, _selectedRegion, (val) => _updateRegion(val), sw, sh, "Regions"),
-          _buildFilterBar(_categories, _selectedCategory, (val) => _updateCategory(val), sw, sh, "Categories"),
           
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: _isLoading 
                   ? FutureBuilder(
-                      // Key based on page ensures the loader resets when you change pages
                       key: ValueKey('loading_page_$_currentPage'), 
                       future: Future.delayed(const Duration(milliseconds: 200)),
                       builder: (context, snapshot) {
-                        // Only show the spinner if 200ms have passed AND we are still loading
                         if (snapshot.connectionState == ConnectionState.done && _isLoading) {
                           return const Center(
                             child: CircularProgressIndicator(color: primaryColor),
                           );
                         }
-                        // Show nothing for the first 199ms to prevent flickering
                         return const SizedBox.shrink();
                       },
                     )
-                  : _stories.isEmpty 
-                      ? _buildEmptyState(sw)
+                  : _savedStories.isEmpty 
+                      ? _buildEmptyState(sw, sh)
                       : ListView.builder(
-                          key: ValueKey('story_page_$_currentPage'), 
-                          padding: EdgeInsets.symmetric(horizontal: sw * 0.05),
-                          itemCount: _stories.length,
+                          key: ValueKey('saved_page_$_currentPage'), 
+                          padding: EdgeInsets.symmetric(horizontal: sw * 0.05, vertical: sh * 0.01),
+                          itemCount: _savedStories.length,
                           itemBuilder: (context, index) {
-                            final data = _stories[index].data() as Map<String, dynamic>;
-                            return _buildStoryItem(data, sw, sh);
+                            final data = _savedStories[index].data() as Map<String, dynamic>;
+                            return _buildSavedCard(context, data, sw, sh);
                           },
                         ),
             ),
@@ -184,34 +183,6 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
     );
   }
 
-  void _updateRegion(String region) {
-    if (!_isLoading) {
-      setState(() {
-        _selectedRegion = region;
-        _resetPagination();
-      });
-      _fetchStories(isInitial: true);
-    }
-  }
-
-  void _updateCategory(String category) {
-    if (!_isLoading) {
-      setState(() {
-        _selectedCategory = category;
-        _resetPagination();
-      });
-      _fetchStories(isInitial: true);
-    }
-  }
-
-  void _resetPagination() {
-    _currentPage = 1;
-    _lastDocument = null;
-    _pageHistory.clear();
-    _pageHistory[1] = null;
-  }
-
-  // EXACT DESIGN SEARCH BAR METHOD
   Widget _buildSearchBar(double sw, double sh) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: sw * 0.05, vertical: sh * 0.01),
@@ -219,7 +190,7 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
         controller: _searchController,
         style: TextStyle(color: primaryColor, fontSize: sw * 0.04),
         decoration: InputDecoration(
-          hintText: "Search heroes, rulers, battles...",
+          hintText: "Search your saved legends...",
           hintStyle: TextStyle(color: primaryColor.withValues(alpha: 0.4), fontSize: sw * 0.035),
           prefixIcon: Icon(Icons.search, color: primaryColor.withValues(alpha: 0.5), size: sw * 0.05),
           suffixIcon: _searchQuery.isNotEmpty 
@@ -243,43 +214,7 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
     );
   }
 
-  Widget _buildFilterBar(List<String> items, String current, Function(String) onSelected, double sw, double sh, String label) {
-    return Container(
-      height: sh * 0.05,
-      margin: EdgeInsets.symmetric(vertical: sh * 0.005),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: sw * 0.05),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final isSelected = current == item;
-          return Padding(
-            padding: EdgeInsets.only(right: sw * 0.02),
-            child: ChoiceChip(
-              label: Text(item),
-              selected: isSelected,
-              onSelected: (val) { if (val) onSelected(item); },
-              selectedColor: primaryColor,
-              backgroundColor: Colors.transparent,
-              labelStyle: TextStyle(
-                color: isSelected ? backgroundColor : primaryColor,
-                fontSize: sw * 0.03,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(sw * 0.02),
-                side: BorderSide(color: primaryColor.withValues(alpha: 0.2))
-              ),
-              showCheckmark: false,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStoryItem(Map<String, dynamic> data, double sw, double sh) {
+  Widget _buildSavedCard(BuildContext context, Map<String, dynamic> data, double sw, double sh) {
     return Container(
       margin: EdgeInsets.only(bottom: sh * 0.02),
       decoration: BoxDecoration(
@@ -299,7 +234,7 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
           ),
         ),
         subtitle: Text(
-          "Tap to explore this legend", // EXACT subtext style
+          "Tap to explore this legend", 
           style: TextStyle(
             color: primaryColor.withValues(alpha: 0.5), 
             fontSize: sw * 0.03
@@ -310,27 +245,34 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
           color: primaryColor, 
           size: sw * 0.04
         ),
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             PageRouteBuilder(
               transitionDuration: const Duration(milliseconds: 200),
-              reverseTransitionDuration: const Duration(milliseconds: 200),
               pageBuilder: (context, animation, secondaryAnimation) =>
                   StoryDetailScreen(data: data), 
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                final curvedAnimation = CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                  reverseCurve: Curves.easeIn,
-                );
                 return FadeTransition(
-                  opacity: curvedAnimation,
+                  opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
                   child: child,
                 );
               },
             ),
           );
+          // Refresh list on return to remove items un-bookmarked in detail screen
+          if (mounted) {
+            // 1. Refresh the current page data
+            await _fetchSavedStories(isInitial: false, isNext: false);
+
+            // 2. SAFETY CHECK: If the page is now empty and we aren't on page 1, go back
+            if (_savedStories.isEmpty && _currentPage > 1) {
+              setState(() {
+                _currentPage--;
+              });
+              _fetchSavedStories(); // Fetch the previous page automatically
+            }
+          }
         },
       ),
     );
@@ -345,16 +287,16 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
         children: [
           _navIcon(Icons.chevron_left, (_currentPage > 1 && !_isLoading) ? () {
             setState(() => _currentPage--);
-            _fetchStories();
+            _fetchSavedStories();
           } : null, sw),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: sw * 0.1),
             child: Text("Page $_currentPage", style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: sw * 0.04)),
           ),
           _navIcon(Icons.chevron_right, (_hasNextPage && !_isLoading) ? () {
-            _pageHistory[_currentPage] = _stories.first; 
+            _pageHistory[_currentPage] = _savedStories.first; 
             setState(() => _currentPage++);
-            _fetchStories(isNext: true);
+            _fetchSavedStories(isNext: true);
           } : null, sw),
         ],
       ),
@@ -375,7 +317,19 @@ class _StoriesOfIndiaScreenState extends State<StoriesOfIndiaScreen> {
     );
   }
 
-  Widget _buildEmptyState(double sw) {
-    return Center(child: Text("No stories found.", style: TextStyle(color: primaryColor.withValues(alpha: 0.4), fontSize: sw * 0.04)));
+  Widget _buildEmptyState(double sw, double sh) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.bookmark_border_rounded, size: sw * 0.2, color: primaryColor.withValues(alpha: 0.3)),
+          SizedBox(height: sh * 0.02),
+          Text(
+            _searchQuery.isEmpty ? "No stories saved yet." : "No matching stories found.",
+            style: TextStyle(color: primaryColor, fontSize: sw * 0.045, fontFamily: 'Serif'),
+          ),
+        ],
+      ),
+    );
   }
 }

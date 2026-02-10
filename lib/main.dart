@@ -5,6 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/festivalscript.dart'; // Import the script to populate the database
+import 'utils/storiesscript.dart'; // Import the script to populate the database
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ void main() async {
   await Firebase.initializeApp();
   // Run the script once
   await populateEncylopeadicFestivals();
+  await uploadStories();
   runApp(const MyApp());
 }
 

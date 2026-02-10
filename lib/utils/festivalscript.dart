@@ -593,27 +593,32 @@ Future<void> populateEncylopeadicFestivals() async {
     },
   ];
 
-  // 2. OPTIMIZATION: Start all 'get' requests at the same time (Parallel)
-  // This prevents the "One-by-One" waiting lag
-  List<Future<DocumentSnapshot>> checkTasks = festivalList.map((f) {
-    return festivals.doc(f['Name']).get();
-  }).toList();
-
-  // Wait for all checks to finish together
-  List<DocumentSnapshot> snapshots = await Future.wait(checkTasks);
-
+  // 1. Get all existing document IDs currently in Firestore
+  QuerySnapshot currentDocs = await festivals.get();
+  
+  // Create a Set of Names from your local script for O(1) lookup
+  final Set<String> scriptNames = festivalList.map((f) => f['Name']! as String).toSet();
+  
   WriteBatch batch = FirebaseFirestore.instance.batch();
   int count = 0;
 
-  // 3. Loop through snapshots and only add missing ones to the batch
-  for (int i = 0; i < festivalList.length; i++) {
-    if (!snapshots[i].exists) {
-      DocumentReference docRef = festivals.doc(festivalList[i]['Name']);
-      batch.set(docRef, festivalList[i]);
+  // 2. DELETE: Remove documents from Firestore that are NOT in your script
+  for (var doc in currentDocs.docs) {
+    if (!scriptNames.contains(doc.id)) {
+      batch.delete(doc.reference);
       count++;
     }
   }
 
-  // 4. Final Commit: Send all new data in one single network call
-  if (count > 0)  await batch.commit();
+  // 3. ADD/UPDATE: Add missing ones or update existing ones from script
+  // Using 'set' with no options will overwrite/refresh the data
+  for (var festival in festivalList) {
+    DocumentReference docRef = festivals.doc(festival['Name']);
+    batch.set(docRef, festival);
+    count++;
+  }
+
+  // 4. Final Commit: Sync everything in one go
+  // Note: If count > 500, you'll need to split into multiple batches
+  if (count > 0) await batch.commit();
 }

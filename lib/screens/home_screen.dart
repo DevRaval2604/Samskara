@@ -24,6 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
+  // Key to force total reset of the pages
+  Key _pageKey = UniqueKey();
+
   @override
   void initState() {
     super.initState();
@@ -56,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
         name = data?['Name'];
       }
 
-      // Fallback to display name for Google users or if doc/name not found
       name ??= user.displayName;
 
       setState(() {
@@ -111,29 +113,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Keeps it transparent at rest
+        backgroundColor: Colors.transparent,
         elevation: 0, 
-        scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         title: Text(titles[_selectedIndex], style: TextStyle(color: primaryColor, fontSize: screenWidth * 0.06, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           GestureDetector(
-            onTap: () {
-              // Replaced MaterialPageRoute with PageRouteBuilder for a consistent, curved fade effect
-              Navigator.push(
+            onTap: () async { // Changed to async
+              await Navigator.push(
                 context,
                 PageRouteBuilder(
                   transitionDuration: const Duration(milliseconds: 200),
                   reverseTransitionDuration: const Duration(milliseconds: 200),
                   pageBuilder: (context, animation, secondaryAnimation) => const ProfileScreen(),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    // Applying the 'Perfect' curve to the 200ms duration
                     final curvedAnimation = CurvedAnimation(
                       parent: animation,
-                      curve: Curves.easeOut,         // Fast start for opening
-                      reverseCurve: Curves.easeIn,   // Fast end for closing
+                      curve: Curves.easeOut,
+                      reverseCurve: Curves.easeIn,
                     );
 
                     return FadeTransition(
@@ -143,6 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               );
+              // Force total reset by changing the key upon return
+              if (mounted) {
+                setState(() {
+                  _pageKey = UniqueKey();
+                });
+              }
             },
             child: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.04),
@@ -155,7 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: pages[_selectedIndex],
+      // KeyedSubtree forces the entire child tree to reset when _pageKey changes
+      body: KeyedSubtree(
+        key: _pageKey,
+        child: pages[_selectedIndex],
+      ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -185,17 +195,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeTab extends StatelessWidget {
+// Converted _HomeTab to StatefulWidget as requested
+class _HomeTab extends StatefulWidget {
   final bool isLoading;
   final String? userName;
   final double screenWidth;
 
-  const _HomeTab({required this.isLoading, required this.userName, required this.screenWidth});
+  const _HomeTab({
+    required this.isLoading, 
+    required this.userName, 
+    required this.screenWidth
+  });
 
   @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  @override
   Widget build(BuildContext context) {
+    // Re-calculating size inside build for proper media query updates
+    final sw = MediaQuery.sizeOf(context).width;
+
     return Center(
-        child: isLoading
+        child: widget.isLoading
             ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor))
             : Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -207,13 +230,13 @@ class _HomeTab extends StatelessWidget {
                     Text(
                       'Welcome,',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: screenWidth * 0.07, color: primaryColor.withAlpha(200)),
+                      style: TextStyle(fontSize: sw * 0.07, color: primaryColor.withAlpha(200)),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      userName ?? 'Valued User',
+                      widget.userName ?? 'Valued User',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: screenWidth * 0.08, fontWeight: FontWeight.bold, color: primaryColor),
+                      style: TextStyle(fontSize: sw * 0.08, fontWeight: FontWeight.bold, color: primaryColor),
                     ),
                   ],
                 ),

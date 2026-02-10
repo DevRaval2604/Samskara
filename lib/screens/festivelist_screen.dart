@@ -115,10 +115,10 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final sw = mq.size.width;
-    final sh = mq.size.height;
-    final topPadding = mq.padding.top;
+    final mq = MediaQuery.sizeOf(context);
+    final sw = mq.width;
+    final sh = mq.height;
+    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       backgroundColor: backgroundColor,

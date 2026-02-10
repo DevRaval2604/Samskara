@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../widgets/common_widgets.dart';
 import 'login_screen.dart';
 import '../utils/get_initials.dart';
+import 'saved_stories_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -143,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0, 
         scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
         surfaceTintColor: Colors.transparent, // <--- THIS ensures no tint is applied
-        iconTheme: IconThemeData(color: primaryColor, size: sw * 0.07),
+        iconTheme: IconThemeData(color: primaryColor),
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('Users').doc(user.uid).snapshots(),
@@ -190,7 +191,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
                   child: Row(
                     children: [
-                      _buildGridItem(Icons.book_outlined, "Saved Stories", sw, sh, () {}),
+                      _buildGridItem(
+                        Icons.book_outlined, 
+                        "Saved Stories", 
+                        sw, 
+                        sh, 
+                        () {
+                          // Navigating to SavedStoriesScreen with your 200ms EaseOut animation
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 200),
+                              reverseTransitionDuration: const Duration(milliseconds: 200),
+                              pageBuilder: (context, animation, secondaryAnimation) => const SavedStoriesScreen(),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                // The 'easeOut' curve makes the 200ms feel snappy and premium
+                                final curvedAnimation = CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOut,         
+                                  reverseCurve: Curves.easeIn,   
+                                );
+
+                                return FadeTransition(
+                                  opacity: curvedAnimation,
+                                  child: child,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
                       SizedBox(width: sw * 0.04),
                       _buildGridItem(Icons.description_outlined, "Saved Shlokas", sw, sh, () {}),
                     ],

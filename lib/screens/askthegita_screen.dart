@@ -43,25 +43,26 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   }
 
   String _sanitizeGeminiOutput(String rawText) {
-    return rawText
-      // 1. Remove Markdown Bold (**), Italics (_ or *), and Headers (###)
-      .replaceAll(RegExp(r'\*\*|__|_|###'), '')
-      
-      // 2. Remove any kind of bullet point at the start of lines (*, -, + or numbers like 1.)
-      .replaceAll(RegExp(r'^\s*([\*\-\+]|\d+\.)\s+', multiLine: true), '')
-      
-      // 3. Remove leading/trailing decorative quotation marks
-      .replaceAll(RegExp(r'^["\u201C]|["\u201D]$'), '')
-      
-      // 4. Replace all newlines/tabs with a single space (forces a flat paragraph)
-      .replaceAll(RegExp(r'[\n\r\t]+'), ' ')
-      
-      // 5. Collapse multiple spaces into one single space
-      .replaceAll(RegExp(r'\s{2,}'), ' ')
-      
-      // 6. Final trim for any stray whitespace at the ends
-      .trim();
-    }
+  return rawText
+    // 1. Replace all Markdown symbols (#, *, _, `, ~) with a SPACE
+    // This character class approach prevents typos like ' _'
+    .replaceAll(RegExp(r'[#\*_`~]+'), ' ') 
+
+    // 2. Remove bullet points at start of lines (Matches: *, -, +, 1.)
+    .replaceAll(RegExp(r'^\s*([\*\-\+]|\d+\.)\s+', multiLine: true), ' ')
+    
+    // 3. Remove decorative quotation marks at start/end
+    .replaceAll(RegExp(r'^["\u201C]|["\u201D]$'), '')
+    
+    // 4. Replace all newlines/tabs with a SPACE (prevents WordAWordB)
+    .replaceAll(RegExp(r'[\n\r\t]+'), ' ')
+    
+    // 5. THE MAGIC STEP: Shrink all resulting multiple spaces into one single space
+    .replaceAll(RegExp(r'\s{2,}'), ' ')
+    
+    // 6. Final trim for a perfect string
+    .trim();
+}
 
   bool _isAppropriate(String query) {
     final forbidden = ['hate', 'violence', 'abuse', 'kill', 'suicide', 'illegal', 'sex'];
