@@ -1376,8 +1376,8 @@ final List<Map<String, dynamic>> storyList = [
       },
       {
         "Title": "Peshwa Baji Rao I: The Unbeaten Cavalry",
-        "Category": "Battles",
-        "Region": "South",
+        "Category": "Forgotten Heroes",
+        "Region": "West",
         "Summary": "The general who never lost a battle.",
         "Description": "Baji Rao I expanded the Maratha Empire into North India, moving the administrative seat to Pune. He is legendary for the Battle of Palkhed, where he outmaneuvered the Nizam of Hyderabad using only high-speed light cavalry. In 20 years of continuous warfare, he remained undefeated, establishing Maratha supremacy across the Deccan.",
         "Modern Edge": "Speed kills. In a market of giants, be the cavalry that strikes and vanishes before the enemy can load their cannons."
