@@ -251,7 +251,7 @@ class _SavedStoriesScreenState extends State<SavedStoriesScreen> {
             PageRouteBuilder(
               transitionDuration: const Duration(milliseconds: 200),
               pageBuilder: (context, animation, secondaryAnimation) =>
-                  StoryDetailScreen(data: data), 
+                  StoryDetailScreen(data: data, isInitiallySaved: true), 
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 return FadeTransition(
                   opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),

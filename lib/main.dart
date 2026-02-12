@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/festivalscript.dart'; // Import the script to populate the database
 import 'utils/storiesscript.dart'; // Import the script to populate the database
+import 'widgets/common_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +19,12 @@ void main() async {
   // Run the script once
   await populateEncylopeadicFestivals();
   await uploadStories();
-  runApp(const MyApp());
+  // 1. Fetch data before the app starts
+  final wisdomService = WisdomService();
+  final initialWisdom = await wisdomService.getDailyWisdom();
+
+  // 2. Pass it to MyApp
+  runApp(MyApp(initialWisdom: initialWisdom));
 }
 
 // Define your colors here so they are accessible
@@ -26,7 +32,8 @@ const Color primaryColor = Color(0xFF6B3C3A);
 const Color backgroundColor = Color(0xFFFDF5E6); // Replace with your exact cream color
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Map<String, dynamic> initialWisdom;
+  const MyApp({super.key, required this.initialWisdom});
 
   @override
   Widget build(BuildContext context) {
@@ -47,20 +54,27 @@ class MyApp extends StatelessWidget {
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
+          precacheImage(const AssetImage('assets/Splash.PNG'), context);
           // While checking auth state, don't show a white screen
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               backgroundColor: backgroundColor, // Ensure this is themed
               body: Center(
-                child: CircularProgressIndicator(color: primaryColor),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SamskaraLogo(),
+                    SizedBox(height: 20),
+                    CircularProgressIndicator(color: primaryColor),
+                  ],
+                ),
               ),
             );
           }
-
           if (snapshot.hasData) {
-            return const HomeScreen();
+            // PASS THE DATA HERE
+            return HomeScreen(initialWisdom: initialWisdom);
           }
-
           return const LoginScreen();
         },
       ),

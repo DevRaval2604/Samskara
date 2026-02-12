@@ -133,7 +133,7 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
               child: _isLoading 
                   ? FutureBuilder(
                       // Use a unique key for the FutureBuilder itself so it resets on every fetch
-                      key: ValueKey('loading_page_$_currentPage'), 
+                      key: ValueKey('loading_page_$_selectedRegion$_currentPage'), 
                       future: Future.delayed(const Duration(milliseconds: 200)),
                       builder: (context, snapshot) {
                         // snapshot.connectionState == ConnectionState.done means 200ms passed
@@ -150,7 +150,7 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
                       ? _buildEmptyState(sw)
                       : ListView.builder(
                           // Keeps the list update smooth
-                          key: ValueKey('list_page_$_currentPage'), 
+                          key: ValueKey('list_page_$_selectedRegion$_currentPage'), 
                           padding: EdgeInsets.symmetric(horizontal: sw * 0.05),
                           itemCount: _festivals.length,
                           itemBuilder: (context, index) {

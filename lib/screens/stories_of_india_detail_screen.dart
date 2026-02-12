@@ -5,8 +5,9 @@ import '../widgets/common_widgets.dart';
 
 class StoryDetailScreen extends StatefulWidget {
   final Map<String, dynamic> data;
+  final bool isInitiallySaved; // Add this
 
-  const StoryDetailScreen({super.key, required this.data});
+  const StoryDetailScreen({super.key, required this.data,required this.isInitiallySaved});
 
   @override
   State<StoryDetailScreen> createState() => _StoryDetailScreenState();
@@ -20,6 +21,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _isSaved = widget.isInitiallySaved;
     _checkSavedStatus();
   }
 
@@ -91,12 +93,12 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          widget.data['Title'] ?? 'The Legend',
+          "Legend Unveiled",
           style: TextStyle(
             color: primaryColor,
             fontFamily: 'Serif',
             fontWeight: FontWeight.bold,
-            fontSize: sw * 0.05,
+            fontSize: sw * 0.06,
           ),
         ),
         leading: IconButton(
@@ -131,7 +133,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                 children: [
                   Icon(Icons.history_edu_rounded, color: primaryColor, size: sw * 0.05),
                   SizedBox(width: sw * 0.02),
-                  _buildSectionTitle("The Summary", sw),
+                  _buildSectionTitle("Context", sw),
                 ],
               ),
               _buildSummaryContent(widget.data['Summary'], sw, sh),
@@ -143,7 +145,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                 children: [
                   Icon(Icons.auto_stories_rounded, color: primaryColor, size: sw * 0.05),
                   SizedBox(width: sw * 0.02),
-                  _buildSectionTitle("The Tale", sw),
+                  _buildSectionTitle("Legacy", sw),
                 ],
               ),
               _buildSectionContent(widget.data['Description'], sw, sh),
@@ -155,7 +157,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                 children: [
                   Icon(Icons.balance_rounded, color: primaryColor, size: sw * 0.05),
                   SizedBox(width: sw * 0.02),
-                  _buildSectionTitle("The Modern Edge", sw),
+                  _buildSectionTitle("Modern Relevance", sw),
                 ],
               ),
               _buildModernEdgeContent(widget.data['Modern Edge'], sw, sh),

@@ -6,6 +6,7 @@ import '../widgets/common_widgets.dart';
 import 'login_screen.dart';
 import '../utils/get_initials.dart';
 import 'saved_stories_screen.dart';
+import 'saved_shlokas_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -222,7 +223,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                       ),
                       SizedBox(width: sw * 0.04),
-                      _buildGridItem(Icons.description_outlined, "Saved Shlokas", sw, sh, () {}),
+                      _buildGridItem(Icons.description_outlined, "Saved Shlokas", sw, sh, () {
+                        // Navigating to SavedStoriesScreen with your 200ms EaseOut animation
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 200),
+                              reverseTransitionDuration: const Duration(milliseconds: 200),
+                              pageBuilder: (context, animation, secondaryAnimation) => const SavedShlokasScreen(),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                // The 'easeOut' curve makes the 200ms feel snappy and premium
+                                final curvedAnimation = CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOut,         
+                                  reverseCurve: Curves.easeIn,   
+                                );
+
+                                return FadeTransition(
+                                  opacity: curvedAnimation,
+                                  child: child,
+                                );
+                              },
+                            ),
+                          );
+                        }
+                      ),
                     ],
                   ),
                 ),

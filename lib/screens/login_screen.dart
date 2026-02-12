@@ -74,6 +74,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void _validateAndLogin() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
+    // 1. Initialize the service
+    final wisdomService = WisdomService();
+
+    // 2. Fetch the data
+    final wisdomData = await wisdomService.getDailyWisdom();
 
     if (email.isEmpty) {
       _emailShakeKey.currentState?.shake();
@@ -127,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 200),
-            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(initialWisdom: wisdomData),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurvedAnimation(
@@ -160,6 +165,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _signInWithGoogle() async {
+    final wisdomService = WisdomService();
+    final wisdomData = await wisdomService.getDailyWisdom();
+
     setState(() => _isLoading = true);
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -203,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 200),
-            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(initialWisdom: wisdomData),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: CurvedAnimation(

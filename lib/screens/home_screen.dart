@@ -1,18 +1,224 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_generative_ai/google_generative_ai.dart'; 
 import 'login_screen.dart';
-import '../widgets/common_widgets.dart';
+import '../widgets/common_widgets.dart'; 
 import 'festivelist_screen.dart';
 import 'storiesofindia_screen.dart';
 import 'askthegita_screen.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'initials_avatar.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+// --- Wisdom Service ---
+
+class WisdomService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  Future<Map<String, dynamic>> getDailyWisdom() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return {};
+
+    final String today = DateTime.now().toIso8601String().split('T')[0];
+    final prefs = await SharedPreferences.getInstance();
+    
+    // --- STEP 1: CACHE RESET (FOR TESTING) ---
+    // If you want to force delete the shloka from your screen right now,
+    // uncomment the line below, run the app once, then comment it back.
+    // await prefs.clear(); 
+
+    // --- STEP 2: LOCAL CACHE CHECK ---
+    String? cachedShloka = prefs.getString('cached_wisdom_data');
+    String? cachedDate = prefs.getString('cached_wisdom_date');
+    
+    if (cachedDate == today && cachedShloka != null) {
+      return Map<String, dynamic>.from(jsonDecode(cachedShloka));
+    }
+
+    _performBackgroundCleanup();
+
+    // 1. Get user's seen list to avoid repeats
+    final userDoc = await _db.collection('Users').doc(user.uid).get();
+    List<dynamic> seenIds = userDoc.data()?['SeenWisdom'] ?? [];
+
+    // 2. THE 365 DAYS LOGIC: Reset history once a year
+    if (seenIds.length >= 365) {
+      await _db.collection('Users').doc(user.uid).update({'SeenWisdom': []});
+      seenIds = [];
+    }
+
+    // 3. THE POOL CHECK: Check the last 50 shlokas in the global pool
+    final poolSnapshot = await _db.collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(50)
+        .get();
+    
+    // In Step 3: THE POOL CHECK
+    for (var doc in poolSnapshot.docs) {
+      final data = doc.data();
+      final source = data['Source']; // e.g., "Gita 2.47"
+
+      if (!seenIds.contains(source)) { // Check the Source, not the ID!
+        return await _finalizeAndCache(user.uid, source, data, today, prefs);
+      }
+    }
+
+    // 4. THE GENERATION: If pool is exhausted, call Gemini
+    return await _generateNewWisdom(user.uid, today, prefs);
+  }
+
+  void _performBackgroundCleanup() {
+      _db.collection('WisdomPool')
+      .where('DeleteAt', isLessThan: Timestamp.now())
+      .limit(20) // Clean 20 at a time for high efficiency
+      .get()
+      .then((snapshot) {
+        if (snapshot.docs.isNotEmpty) {
+          final batch = _db.batch();
+          for (var doc in snapshot.docs) {
+            batch.delete(doc.reference);
+          }
+          // Commit all deletions in ONE single network request
+          return batch.commit();
+        }
+      })
+      .catchError((e) => debugPrint("Cleanup failed: $e"));
+    }
+  // Helper to update History and Local Cache simultaneously
+  Future<Map<String, dynamic>> _finalizeAndCache(
+    String uid, String source, Map<String, dynamic> localData, String today, SharedPreferences prefs
+  ) async {
+    // 1. Update history in Cloud
+    await _db.collection('Users').doc(uid).update({
+      'SeenWisdom': FieldValue.arrayUnion([source])
+    });
+
+    // 2. Save to Local Cache (Now it won't crash!)
+    await prefs.setString('cached_wisdom_data', jsonEncode(localData));
+    await prefs.setString('cached_wisdom_date', today);
+
+    return localData;
+  }
+
+  Future<Map<String, dynamic>> _generateNewWisdom(String uid, String today, SharedPreferences prefs) async {
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+
+    for (String modelName in modelPriority) {
+      try {
+        final model = GenerativeModel(model: modelName, apiKey: apiKey);
+        
+        // --- YOUR ORIGINAL PROMPT LOGIC ---
+        final prompt = """
+          You are a Master Vedic Sage with access to the entire corpus of Indian Knowledge: 
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda.
+          2. The Mukhya Upanishads (Isha, Kena, Katha, Mundaka, etc.).
+          3. The Bhagavad Gita.
+          4. The 18 Mahapuranas and all Upapuranas.
+          5. Chanakya Neeti (The manual of social wisdom and ethics).
+          6. The Arthashastra (The science of statecraft and economics).
+
+          TASK:
+          Generate one "Daily Wisdom" entry. You MUST rotate daily across these diverse sources so the user experiences spiritual, social, and leadership wisdom.
+
+          STRICT FORMATTING RULES:
+          1. [REFERENCE]: State the scripture name clearly first. 
+             - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shlok Y"
+             - For Arthashastra: "Arthashastra - Book X, Chapter Y"
+             - For Puranas: "[Name] Purana - Canto X, Chapter Y"
+             - For Vedas: "[Name] Veda - Mandala X, Sukta Y"
+             - For Upanishads: "[Name] Upanishad - Adhyay X, Valli Y"
+             - For Gita: "Bhagavad Gita - Adhyay X, Shlok Y"
+          2. [SHLOK]: The Sanskrit Verse.
+          3. [TRANSLATION]: The English Translation.
+          4. [PRACTICAL]: Practical, simple modern-day guidance.
+
+          STRICT RULE: Do not use Markdown (no asterisks, no bolding). Return plain text only.
+          """;
+
+        final response = await model.generateContent([Content.text(prompt)]);
+        final text = response.text;
+
+        if (text != null && text.contains('[SHLOK]')) {
+          final expiryDate = DateTime.now().add(const Duration(days: 365));
+
+          // 1. Create the data for the POOL (Includes Firestore-only commands)
+          final Map<String, dynamic> poolData = {
+            'Source': _extractSection(text, '[REFERENCE]', '[SHLOK]'),
+            'Shloka': _extractSection(text, '[SHLOK]', '[TRANSLATION]'),
+            'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
+            'Explanation': _extractSection(text, '[PRACTICAL]', null),
+            'Date': today,
+            'CreatedAt': FieldValue.serverTimestamp(), // Firestore command
+            'DeleteAt': Timestamp.fromDate(expiryDate), // Firestore command
+          };
+
+          // 2. Save to global pool
+          await _db.collection('WisdomPool').add(poolData);
+          
+          // 3. Create a clean version for LOCAL CACHE (No FieldValues)
+          // We convert the Firestore commands to standard strings/ints for JSON
+          final Map<String, dynamic> localData = {
+            ...poolData,
+            'CreatedAt': DateTime.now().toIso8601String(),
+            'DeleteAt': expiryDate.toIso8601String(),
+          };
+
+          // Change the return line at the very end of _generateNewWisdom:
+          return await _finalizeAndCache(
+            uid, 
+            poolData['Source'], // ✅ Pass the text reference, not the ID
+            localData, 
+            today, 
+            prefs
+          );
+        }
+      } catch (e) {
+        debugPrint("Model $modelName failed: $e");
+      }
+    }
+    return {};
+  }
+
+  // --- YOUR ORIGINAL SURGICAL EXTRACTION METHODS (UNCHANGED) ---
+
+  String _extractSection(String text, String startTag, String? endTag) {
+    try {
+      int start = text.indexOf(startTag);
+      if (start == -1) return "";
+      start += startTag.length;
+      int end = (endTag != null) ? text.indexOf(endTag) : text.length;
+      if (end == -1 || end < start) end = text.length;
+      String content = text.substring(start, end).trim();
+      if (content.startsWith(':')) {
+        content = content.substring(1).trim();
+      }
+      return _sanitizeGeminiOutput(content);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  String _sanitizeGeminiOutput(String rawText) {
+    return rawText
+      .replaceAll(RegExp(r'[#\*_`~]+'), ' ') 
+      .replaceAll(RegExp(r'^\s*([\*\-\+]|\d+\.)\s+', multiLine: true), ' ')
+      .replaceAll(RegExp(r'^["\u201C]|["\u201D]$'), '')
+      .replaceAll(RegExp(r'[\n\r\t]+'), ' ')
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .trim();
+  }
+}
+
+// --- HOME SCREEN ---
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Map<String, dynamic> initialWisdom;
+  const HomeScreen({super.key, required this.initialWisdom});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -23,9 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _userName;
   bool _isLoading = true;
   StreamSubscription<DocumentSnapshot>? _userSubscription;
-
-  // Key to force total reset of the pages
-  Key _pageKey = UniqueKey();
+  
 
   @override
   void initState() {
@@ -52,26 +256,18 @@ class _HomeScreenState extends State<HomeScreen> {
         .snapshots()
         .listen((snapshot) {
       if (!mounted) return;
-
       String? name;
       if (snapshot.exists) {
         final data = snapshot.data();
         name = data?['Name'];
       }
-
       name ??= user.displayName;
-
       setState(() {
         _userName = name;
         _isLoading = false;
       });
     }, onError: (e) {
-      if (mounted) {
-        setState(() {
-          _userName = user.displayName;
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     });
   }
 
@@ -84,18 +280,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onDestinationSelected(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sw = MediaQuery.sizeOf(context).width;
 
     final List<Widget> pages = [
-      _HomeTab(isLoading: _isLoading, userName: _userName, screenWidth: screenWidth),
+      _HomeTab(isLoading: _isLoading),
       const FestiveListScreen(),
       const StoriesOfIndiaScreen(),
       const AskTheGitaScreen(),
@@ -114,11 +304,11 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 0, 
+        elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        title: Text(titles[_selectedIndex], style: TextStyle(color: primaryColor, fontSize: screenWidth * 0.06, fontWeight: FontWeight.bold)),
+        title: Text(titles[_selectedIndex], 
+          style: TextStyle(color: primaryColor, fontSize: sw * 0.06, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           GestureDetector(
@@ -143,28 +333,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               );
-              // Force total reset by changing the key upon return
-              if (mounted) {
-                setState(() {
-                  _pageKey = UniqueKey();
-                });
-              }
+            // SOFT REFRESH: Updates the UI (like InitialsAvatar) 
+            // without destroying the whole widget tree.
+            if (mounted) {
+              setState(() {}); 
+            }
             },
             child: Padding(
-              padding: EdgeInsets.only(right: screenWidth * 0.04),
+              padding: EdgeInsets.only(right: sw * 0.04),
               child: InitialsAvatar(
-                radius: screenWidth * 0.055, 
-                fontSize: screenWidth * 0.045, 
+                radius: sw * 0.055, 
+                fontSize: sw * 0.045, 
                 name: _userName,
               ), 
             ),
           ),
         ],
       ),
-      // KeyedSubtree forces the entire child tree to reset when _pageKey changes
-      body: KeyedSubtree(
-        key: _pageKey,
-        child: pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
       ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
@@ -179,7 +367,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: NavigationBar(
           selectedIndex: _selectedIndex,
-          onDestinationSelected: _onDestinationSelected,
+          onDestinationSelected: (int index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
           backgroundColor: backgroundColor,
           indicatorColor: primaryColor.withValues(alpha: 0.2),
           destinations: const [
@@ -195,52 +387,296 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Converted _HomeTab to StatefulWidget as requested
+// --- HOME TAB ---
 class _HomeTab extends StatefulWidget {
   final bool isLoading;
-  final String? userName;
-  final double screenWidth;
 
-  const _HomeTab({
-    required this.isLoading, 
-    required this.userName, 
-    required this.screenWidth
-  });
+  const _HomeTab({required this.isLoading});
 
   @override
   State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<_HomeTab> {
+class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin{
+  Map<String, dynamic>? _wisdomData;
+  bool _isWisdomLoading = true;
+  bool _isSaved = false;
+  StreamSubscription<DocumentSnapshot>? _wisdomSaveSubscription;
+
+  // 2. This keeps the state from being disposed
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDailyWisdom();
+  }
+
+  @override
+  void dispose() {
+    _wisdomSaveSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchDailyWisdom() async {
+    // 1. Get the daily wisdom content
+    final data = await WisdomService().getDailyWisdom();
+    if (!mounted) return;
+
+    // Cancel any previous subscription.
+    await _wisdomSaveSubscription?.cancel();
+
+    bool isSaved = false;
+    // 2. If wisdom was found, check its saved status and set up a listener
+    if (data.isNotEmpty) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docRef = _firestore
+            .collection('Users')
+            .doc(user.uid)
+            .collection('SavedShlokas')
+            .doc(data['Source']);
+
+        // Get initial state
+        final doc = await docRef.get();
+        if (!mounted) return;
+        isSaved = doc.exists;
+
+        // Listen for future changes
+        _wisdomSaveSubscription = docRef.snapshots().listen((snapshot) {
+          if (mounted && _isSaved != snapshot.exists) {
+            setState(() {
+              _isSaved = snapshot.exists;
+            });
+          }
+        });
+      }
+    }
+
+    // 3. Update the UI in a single call to prevent flicker
+    if (mounted) {
+      setState(() {
+        _wisdomData = data;
+        _isSaved = isSaved;
+        _isWisdomLoading = false;
+      });
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide previous if any
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message, style: const TextStyle(color: primaryColor)),
+      backgroundColor: backgroundColor,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: primaryColor, width: 1),
+      ),
+    ));
+  }
+
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+Future<void> _toggleSave() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null || _wisdomData == null) return;
+
+  // Use 'Source' as the ID to prevent a user from saving the same verse twice
+  final docRef = _firestore
+      .collection('Users')
+      .doc(user.uid)
+      .collection('SavedShlokas')
+      .doc(_wisdomData!['Source']);
+
+  // Optimistic Update: UI flips immediately for better UX
+  setState(() => _isSaved = !_isSaved);
+
+  try {
+    if (_isSaved) {
+      // 1. Create a clean copy of the wisdom data
+      final Map<String, dynamic> dataToSave = Map<String, dynamic>.from(_wisdomData!);
+
+      // 2. Remove pool-specific fields so they don't clutter the user's collection
+      dataToSave.remove('DeleteAt');
+      dataToSave.remove('CreatedAt');
+      dataToSave.remove('Date'); // Optional: keep if you want to know which day's wisdom this was
+
+      // 3. Save with the new permanent timestamp
+      await docRef.set({
+        ...dataToSave,
+        'SavedAt': FieldValue.serverTimestamp(), // [2026-02-11] Capitalized
+      });
+    } else {
+      await docRef.delete();
+    }
+  } catch (e) {
+    // Revert UI if the network fails
+    if (mounted) {
+      setState(() => _isSaved = !_isSaved);
+      _showError("Cloud sync failed. Check your connection.");
+    }
+  }
+}
+
   @override
   Widget build(BuildContext context) {
-    // Re-calculating size inside build for proper media query updates
+    // 3. MANDATORY: You must call super.build
+    super.build(context);
     final sw = MediaQuery.sizeOf(context).width;
+    final sh = MediaQuery.sizeOf(context).height;
 
-    return Center(
-        child: widget.isLoading
-            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(primaryColor))
-            : Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SamskaraLogo(),
-                    const SizedBox(height: 60),
-                    Text(
-                      'Welcome,',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: sw * 0.07, color: primaryColor.withAlpha(200)),
+    // Check if everything is loaded
+    final bool totalLoading = widget.isLoading || _isWisdomLoading;
+
+    if (totalLoading) {
+      return FutureBuilder(
+        key: const ValueKey('loading_home_tab'),
+        future: Future.delayed(const Duration(milliseconds: 300)),
+        builder: (context, snapshot) {
+          // Only show the spinner if 200ms have passed AND we are still loading
+          if (snapshot.connectionState == ConnectionState.done && totalLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: primaryColor),
+            );
+          }
+          // Show nothing for the first 199ms to prevent flicker
+          return const SizedBox.shrink();
+        },
+      );
+    }
+
+    // Logo and Namaste only show when data is ready
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
+        child: Column(
+          children: [
+            SizedBox(height: sh * 0.02),
+            const SamskaraLogo(),
+            SizedBox(height: sh * 0.05),
+
+            _buildWisdomCard(sw, sh),
+            
+            SizedBox(height: sh * 0.05),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWisdomCard(double sw, double sh) {
+    // Scaling factors for uniformity
+    final double cardPadding = sw * 0.05;
+    final double internalSpacing = sh * 0.015;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: cardPadding, horizontal: sw * 0.04),
+      decoration: BoxDecoration(
+        color: primaryColor.withValues(alpha: 0.03), // Soft glow background
+        borderRadius: BorderRadius.circular(sw * 0.05),
+        border: Border.all(color: primaryColor, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // MAIN TITLE & ACTIONS
+          Row(
+            children: [
+              // 1. GHOST WIDGET (Left side)
+              // This perfectly balances the width of the icon button on the right
+              // so the text stays in the exact middle.
+              SizedBox(width: sw * 0.08), 
+
+              // 2. CENTERED TEXT
+              Expanded(
+                child: Center(
+                  child: Text(
+                    "DAILY WISDOM",
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: sw * 0.030,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.userName ?? 'Valued User',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: sw * 0.08, fontWeight: FontWeight.bold, color: primaryColor),
-                    ),
-                  ],
+                  ),
                 ),
               ),
+
+              // 3. ACTION BUTTONS (Right side)
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  _isSaved ? Icons.bookmark : Icons.bookmark_border_rounded, 
+                  color: primaryColor, 
+                  size: sw * 0.055
+                ),
+                onPressed: _toggleSave, // Using the new toggle save logic
+              ),
+            ],
+          ),
+          
+          SizedBox(height: internalSpacing),
+
+          // 1. SACRED REFERENCE (The Adhyay/Shlok part)
+          _buildInternalBlock("Reference", _wisdomData?['Source'] ?? '', sw, sh),
+          
+          // 2. THE SHLOK (Sanskrit)
+          _buildInternalBlock("Sacred Shlok", _wisdomData?['Shloka'] ?? '', sw, sh, isSanskrit: true, isItalic: true),
+
+          // 3. THE MEANING (English)
+          _buildInternalBlock("Meaning", _wisdomData?['Meaning'] ?? '', sw, sh),
+
+          // 4. MODERN RELEVANCE (Practical)
+          _buildInternalBlock("Modern Relevance", _wisdomData?['Explanation'] ?? '', sw, sh, isJustified: true),
+        ],
+      ),
+    );
+  }
+
+  // --- REUSABLE INTERNAL BLOCK (The "Separated Card" look) ---
+  Widget _buildInternalBlock(String title, String content, double sw, double sh, 
+      {bool isSanskrit = false, bool isItalic = false, bool isJustified = false}) {
+    
+    return Padding(
+      padding: EdgeInsets.only(bottom: sh * 0.012), // Reduced spacing for compactness
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(sw * 0.035), // Uniform internal padding
+        decoration: BoxDecoration(
+          color: backgroundColor, 
+          borderRadius: BorderRadius.circular(sw * 0.05),
+          border: Border.all(color: primaryColor, width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Text(title.toUpperCase(), 
+              style: TextStyle(
+                color: primaryColor, 
+                fontWeight: FontWeight.bold, 
+                fontSize: sw * 0.030, // Smaller, uniform title
+                letterSpacing: 1.0
+              )),
+            SizedBox(height: sh * 0.006),
+            Text(
+              content,
+              textAlign: isJustified ? TextAlign.justify : TextAlign.center,
+              style: TextStyle(
+                color: primaryColor, // Everything must be primaryColor
+                fontSize: sw * 0.036, // Uniform sizing to prevent "too large" issue
+                fontFamily: 'Serif',
+                fontStyle: isItalic || isSanskrit ? FontStyle.italic : FontStyle.normal,
+                fontWeight: FontWeight.normal,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

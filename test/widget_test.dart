@@ -11,9 +11,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:samskara/main.dart';
 
 void main() {
+  // Create a fake piece of wisdom data for the test
+  final Map<String, dynamic> mockWisdom = {
+    'Source': 'Test Source',
+    'Shloka': 'Test Sanskrit Shloka',
+    'Meaning': 'Test Translation',
+    'Explanation': 'Test Practical Guidance',
+  };
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(initialWisdom: mockWisdom));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);
