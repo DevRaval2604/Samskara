@@ -14,21 +14,22 @@
 ### 📖 Ask the Gita
 An AI-driven interface that allows users to seek spiritual guidance directly from the **Bhagavad Gita**.
 * **Intelligent Interpretation:** Powered by `gemini-3-flash` to provide contextually accurate shlokas for real-world problems.
-* **Modern Relevance:** Converts ancient Sanskrit wisdom into actionable advice for today’s challenges.
+* **Modern Relevance:** Every response bridges the gap between ancient Sanskrit wisdom and actionable advice for today’s challenges.
 
 ### 📜 Stories of India
-An immersive digital library documenting the vast "Itihasa" (History) and Mythology of Bharat.
-* **Curated Narratives:** High-quality storytelling focused on Puranic legends, historical heroes, and philosophical parables.
-* **Optimized Reading:** A clean, focused UI designed for deep reading and reflection.
+An immersive digital library documenting the true **Itihasa** (History) and heritage of Bharat. This section is strictly dedicated to factual narratives and historical legacies.
+* **Historical Grit:** Deep dives into the lives of **Great Rulers**, **Freedom Fighters**, and the strategic brilliance of **Legendary Battles**.
+* **Unsung Legacies:** Bringing to light **Forgotten Heroes** and the groundbreaking contributions of **Ancient Science and Scholars**.
+* **Focused Experience:** A clean, high-performance UI designed for deep historical learning and reflection.
 
 ### 🗓️ Indian Festivals
 A comprehensive, real-time guide to the diverse festivals of the Indian subcontinent.
-* **Cultural Context:** Deep dives into the astronomical, spiritual, and social significance of each festival.
-* **Ritual Guides:** Explanations of traditional practices and the stories behind the celebrations.
+* **Cultural & Modern Context:** Deep dives into the astronomical and spiritual significance of each festival, including its **Modern Relevance** in today's society.
+* **Ritual Guides:** Clear explanations of traditional practices and the historical events behind the celebrations.
 
 ### 🧘 Daily Wisdom
 A personalized daily routine featuring a handpicked Shloka to center your mind.
-* **Triple-Layer Analysis:** Each entry includes the original **Sanskrit Shloka**, a clear **Translation**, and a deep **Philosophical Explanation**.
+* **Quad-Layer Analysis:** Each entry includes the original **Sanskrit Shloka**, a clear **Translation**, a deep **Philosophical Explanation**, and a dedicated **Modern Relevance** section for practical application.
 
 ---
 
@@ -37,9 +38,9 @@ A personalized daily routine featuring a handpicked Shloka to center your mind.
 ### 📱 Performance-Optimized Responsiveness
 The app is built with a sophisticated **Dimension-Driven UI** philosophy. 
 
-* **`MediaQuery.sizeOf(context)` Integration:** To maximize performance, the app utilizes `MediaQuery.sizeOf(context)` to fetch device dimensions. This ensures that widgets only rebuild when the specific size properties change, avoiding the overhead of the standard `.of(context)` call.
-* **Dynamic Scaling:** Every element—from the "Ask the Gita" chat bubbles to the "Festival" cards—calculates its scale dynamically using the device's **Width** and **Height**. 
-* **Flexible Grids:** Content containers for "Stories of India" are mathematically scaled to ensure text readability and image aspect ratios remain consistent across all screen sizes and densities.
+* **`MediaQuery.sizeOf(context)` Integration:** To maximize performance, the app utilizes `MediaQuery.sizeOf(context)` to fetch device dimensions. This ensures that widgets only rebuild when the specific size properties change, avoiding unnecessary rebuilds.
+* **Dynamic Scaling:** Every element—from the "Ask the Gita" chat bubbles to the "Festival" and "Story" cards—calculates its scale dynamically using the device's **Width** and **Height**. 
+* **Flexible Grids:** Content containers are mathematically scaled to ensure text readability remains perfectly consistent across all screen sizes and densities without the use of static assets.
 
 ---
 
@@ -71,7 +72,6 @@ The app is built with a sophisticated **Dimension-Driven UI** philosophy.
     flutter pub get
     flutter run
     ```
-
 ---
 
 ## 📐 Design Philosophy
