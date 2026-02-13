@@ -256,20 +256,9 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
                 ),
               ),
 
-              if (_simpleResponse != null) ...[
+              if (_simpleResponse != null || _shlok != null) ...[
                 SizedBox(height: sh * 0.04),
-                _buildWisdomCard("Guide's Reply", _simpleResponse!, sw, sh, isJustified: true),
-                SizedBox(height: sh * 0.04),
-              ],
-
-              if (_shlok != null) ...[
-                SizedBox(height: sh * 0.04),
-                // New Card for the Verse Reference (Adhyay & Number)
-              if (_verseRef != null) 
-                _buildWisdomCard("Gita Adhyay & Shlok", _verseRef!, sw, sh),
-                _buildWisdomCard("Sacred Shlok", _shlok!, sw, sh, isSanskrit: true),
-                _buildWisdomCard("Translation", _translation!, sw, sh),
-                _buildWisdomCard("Practical Guidance", _interpretation!, sw, sh, isJustified: true),
+                _buildResponseCard(sw, sh),
                 SizedBox(height: sh * 0.04),
               ],
             ],
@@ -279,30 +268,93 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     );
   }
 
-  Widget _buildWisdomCard(String title, String content, double sw, double sh, {bool isSanskrit = false, bool isJustified = false}) {
+  Widget _buildResponseCard(double sw, double sh) {
+    // Scaling factors for uniformity
+    final double cardPadding = sw * 0.05;
+    final double internalSpacing = sh * 0.015;
+
+    List<Widget> contentWidgets = [];
+
+    if (_simpleResponse != null) {
+      contentWidgets.add(_buildInternalBlock("Guide's Reply", _simpleResponse!, sw, sh, isJustified: true));
+    } else if (_shlok != null) {
+      if (_verseRef != null) {
+        contentWidgets.add(_buildInternalBlock("Gita Adhyay & Shlok", _verseRef!, sw, sh));
+      }
+      contentWidgets.add(_buildInternalBlock("Sacred Shlok", _shlok!, sw, sh, isSanskrit: true, isItalic: true));
+      contentWidgets.add(_buildInternalBlock("Translation", _translation!, sw, sh));
+      contentWidgets.add(_buildInternalBlock("Practical Guidance", _interpretation!, sw, sh, isJustified: true));
+    }
+
+    if (contentWidgets.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(horizontal: sw * 0.06),
+      padding: EdgeInsets.symmetric(vertical: cardPadding, horizontal: sw * 0.04),
+      decoration: BoxDecoration(
+        color: primaryColor.withValues(alpha: 0.03), // Soft glow background
+          borderRadius: BorderRadius.circular(sw * 0.05),
+          border: Border.all(color: primaryColor, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+          // MAIN TITLE
+          Center(
+            child: Text(
+              "GITA'S WISDOM",
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: sw * 0.030,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          
+          SizedBox(height: internalSpacing),
+
+          ...contentWidgets,
+        ],
+      ),
+    );
+  }
+
+  // --- REUSABLE INTERNAL BLOCK (The "Separated Card" look) ---
+  Widget _buildInternalBlock(String title, String content, double sw, double sh, 
+      {bool isSanskrit = false, bool isItalic = false, bool isJustified = false}) {
+    
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: sh * 0.01),
+      padding: EdgeInsets.only(bottom: sh * 0.012), // Reduced spacing for compactness
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(sw * 0.05),
+        padding: EdgeInsets.all(sw * 0.035), // Uniform internal padding
         decoration: BoxDecoration(
+          color: backgroundColor, 
           borderRadius: BorderRadius.circular(sw * 0.05),
           border: Border.all(color: primaryColor, width: 1.5),
         ),
         child: Column(
           children: [
-            Text(title.toUpperCase(), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: sw * 0.03, letterSpacing: 1.5)),
-            SizedBox(height: sh * 0.015),
+            Text(title.toUpperCase(), 
+              style: TextStyle(
+                color: primaryColor, 
+                fontWeight: FontWeight.bold, 
+                fontSize: sw * 0.030, // Smaller, uniform title
+                letterSpacing: 1.0
+              )),
+            SizedBox(height: sh * 0.006),
             SelectableText(
               content,
               textAlign: isJustified ? TextAlign.justify : TextAlign.center,
               style: TextStyle(
-                color: primaryColor,
-                fontSize: sw * 0.042,
+                color: primaryColor, // Everything must be primaryColor
+                fontSize: sw * 0.036, // Uniform sizing to prevent "too large" issue
                 fontFamily: 'Serif',
-                fontStyle: isSanskrit ? FontStyle.italic : FontStyle.normal,
-                height: 1.5,
-                letterSpacing: 0.2,
+                fontStyle: isItalic || isSanskrit ? FontStyle.italic : FontStyle.normal,
+                fontWeight: FontWeight.normal,
+                height: 1.4,
               ),
             ),
           ],
