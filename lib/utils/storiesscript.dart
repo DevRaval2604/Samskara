@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 Future<void> uploadStories() async {
-    final CollectionReference stories =
-        FirebaseFirestore.instance.collection('Stories');
+  try {
+  final firestore = FirebaseFirestore.instance;
+  final CollectionReference stories = firestore.collection('Stories');
 
 final List<Map<String, dynamic>> storyList = [
       // --- ANCIENT SCIENCE & SCHOLARS ---
@@ -1743,32 +1746,87 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The Power of Logistics. Visionary ideas are useless without the 'Iron Will' to organize the details. To win at scale, you must master the boring, back-end logistics of your mission as thoroughly as the front-end strategy."
       },
       ];
-      // 1. Get all existing document IDs currently in Firestore
-      QuerySnapshot currentDocs = await stories.get();
-      
-      // Create a Set of Titles from your local script for O(1) lookup
-      final Set<String> scriptTitles = storyList.map((s) => s['Title']! as String).toSet();
-      
-      WriteBatch batch = FirebaseFirestore.instance.batch();
-      int count = 0;
 
-      // 2. DELETE: Remove documents from Firestore that are NOT in your script
-      for (var doc in currentDocs.docs) {
-        if (!scriptTitles.contains(doc.id)) {
-          batch.delete(doc.reference);
-          count++;
-        }
-      }
+  // --- AUTOMATED CHANGE DETECTION ---
+  // 1. Calculate a hash of the local data
+  final String localDataJson = jsonEncode(storyList);
+  final int localHash = _generateSimpleHash(localDataJson);
 
-      // 3. ADD/UPDATE: Add missing ones or update existing ones from script
-      // Using 'set' with no options will overwrite/refresh the data
-      for (var story in storyList) {
-        DocumentReference docRef = stories.doc(story['Title']);
-        batch.set(docRef, story);
-        count++;
-      }
+  final DocumentReference configDoc =
+      firestore.collection('AppConfig').doc('storiesConfig');
 
-      // 4. Final Commit: Sync everything in one go
-      // Note: If count > 500, you'll need to split into multiple batches
-      if (count > 0) await batch.commit();
+  // 2. Check Firestore for the last uploaded hash
+  final configSnapshot = await configDoc.get();
+  int? remoteHash;
+  if (configSnapshot.exists && configSnapshot.data() != null) {
+    remoteHash = (configSnapshot.data() as Map<String, dynamic>)['hash'];
+  }
+
+  // 3. If hashes match, stop immediately.
+  if (localHash == remoteHash) {
+    debugPrint('Stories data is up to date (Hash: $localHash). No sync needed.');
+    return;
+  }
+
+  debugPrint('Change detected in Stories. Syncing...');
+
+  // 4. Get all existing docs for smart diff
+  QuerySnapshot currentDocs = await stories.get();
+  final Map<String, dynamic> existingDataMap = {
+    for (var doc in currentDocs.docs) doc.id: doc.data()
+  };
+
+  final Set<String> scriptTitles = storyList.map((s) => s['Title']! as String).toSet();
+
+  WriteBatch batch = firestore.batch();
+  int writeCount = 0;
+
+  // 5. DELETE
+  for (var doc in currentDocs.docs) {
+    if (!scriptTitles.contains(doc.id)) {
+      batch.delete(doc.reference);
+      writeCount++;
     }
+  }
+
+  // 6. ADD/UPDATE
+  for (var story in storyList) {
+    final String docId = story['Title'];
+    final DocumentReference docRef = stories.doc(docId);
+
+    bool needsUpdate = true;
+    if (existingDataMap.containsKey(docId)) {
+      if (jsonEncode(existingDataMap[docId]) == jsonEncode(story)) {
+        needsUpdate = false;
+      }
+    }
+
+    if (needsUpdate) {
+      batch.set(docRef, story);
+      writeCount++;
+    }
+  }
+
+  // 7. Update Config Hash
+  batch.set(configDoc, {'hash': localHash, 'lastUpdated': FieldValue.serverTimestamp()});
+  writeCount++;
+
+  await batch.commit();
+  debugPrint('✅ Synced Stories: $writeCount write operations performed.');
+  } catch (e) {
+    debugPrint("Error in uploadStories: $e");
+  }
+}
+
+// Simple hash function
+int _generateSimpleHash(String input) {
+  var hash = 0;
+  for (var i = 0; i < input.length; i++) {
+    hash = 0x1fffffff & (hash + input.codeUnitAt(i));
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    hash ^= hash >> 6;
+  }
+  hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+  hash ^= hash >> 11;
+  return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+}

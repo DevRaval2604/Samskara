@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 Future<void> populateEncylopeadicFestivals() async {
-  final CollectionReference festivals = 
-      FirebaseFirestore.instance.collection('Festivals');
+  try {
+  final firestore = FirebaseFirestore.instance;
+  final CollectionReference festivals = firestore.collection('Festivals');
 
   final List<Map<String, dynamic>> festivalList = [
     {
@@ -593,32 +596,87 @@ Future<void> populateEncylopeadicFestivals() async {
     },
   ];
 
-  // 1. Get all existing document IDs currently in Firestore
+  // --- AUTOMATED CHANGE DETECTION ---
+  // 1. Calculate a hash of the local data to detect changes automatically
+  final String localDataJson = jsonEncode(festivalList);
+  final int localHash = _generateSimpleHash(localDataJson);
+
+  final DocumentReference configDoc =
+      firestore.collection('AppConfig').doc('festivalsConfig');
+
+  // 2. Check Firestore for the last uploaded hash
+  final configSnapshot = await configDoc.get();
+  int? remoteHash;
+  if (configSnapshot.exists && configSnapshot.data() != null) {
+    remoteHash = (configSnapshot.data() as Map<String, dynamic>)['hash'];
+  }
+
+  // 3. If hashes match, data is identical. STOP here.
+  if (localHash == remoteHash) {
+    debugPrint('Festivals data is up to date (Hash: $localHash). No sync needed.');
+    return;
+  }
+
+  debugPrint('Change detected in Festivals. Syncing...');
+
+  // 4. Get all existing docs to perform a smart diff
   QuerySnapshot currentDocs = await festivals.get();
-  
-  // Create a Set of Names from your local script for O(1) lookup
+  final Map<String, dynamic> existingDataMap = {
+    for (var doc in currentDocs.docs) doc.id: doc.data()
+  };
+
   final Set<String> scriptNames = festivalList.map((f) => f['Name']! as String).toSet();
   
-  WriteBatch batch = FirebaseFirestore.instance.batch();
-  int count = 0;
+  WriteBatch batch = firestore.batch();
+  int writeCount = 0;
 
-  // 2. DELETE: Remove documents from Firestore that are NOT in your script
+  // 5. DELETE: Remove documents NOT in script
   for (var doc in currentDocs.docs) {
     if (!scriptNames.contains(doc.id)) {
       batch.delete(doc.reference);
-      count++;
+      writeCount++;
     }
   }
 
-  // 3. ADD/UPDATE: Add missing ones or update existing ones from script
-  // Using 'set' with no options will overwrite/refresh the data
+  // 6. ADD/UPDATE: Only write if data is different
   for (var festival in festivalList) {
-    DocumentReference docRef = festivals.doc(festival['Name']);
-    batch.set(docRef, festival);
-    count++;
+    final String docId = festival['Name'];
+    final DocumentReference docRef = festivals.doc(docId);
+
+    // Check if content actually changed before writing
+    bool needsUpdate = true;
+    if (existingDataMap.containsKey(docId)) {
+      if (jsonEncode(existingDataMap[docId]) == jsonEncode(festival)) {
+        needsUpdate = false;
+      }
+    }
+
+    if (needsUpdate) {
+      batch.set(docRef, festival);
+      writeCount++;
+    }
   }
 
-  // 4. Final Commit: Sync everything in one go
-  // Note: If count > 500, you'll need to split into multiple batches
-  if (count > 0) await batch.commit();
+  // 7. Update the Config Hash so we don't run this again next time
+  batch.set(configDoc, {'hash': localHash, 'lastUpdated': FieldValue.serverTimestamp()});
+  writeCount++;
+
+  await batch.commit();
+  debugPrint('✅ Synced Festivals: $writeCount write operations performed.');
+  } catch (e) {
+    debugPrint("Error in populateEncylopeadicFestivals: $e");
+  }
+}
+
+// Simple hash function to avoid external dependencies
+int _generateSimpleHash(String input) {
+  var hash = 0;
+  for (var i = 0; i < input.length; i++) {
+    hash = 0x1fffffff & (hash + input.codeUnitAt(i));
+    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+    hash ^= hash >> 6;
+  }
+  hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+  hash ^= hash >> 11;
+  return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
 }
