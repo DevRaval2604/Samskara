@@ -27,12 +27,7 @@ class WisdomService {
     final String today = DateTime.now().toIso8601String().split('T')[0];
     final prefs = await SharedPreferences.getInstance();
     
-    // --- STEP 1: CACHE RESET (FOR TESTING) ---
-    // If you want to force delete the shloka from your screen right now,
-    // uncomment the line below, run the app once, then comment it back.
-    // await prefs.clear(); 
-
-    // --- STEP 2: LOCAL CACHE CHECK ---
+    // --- STEP 1: LOCAL CACHE CHECK (Fastest) ---
     String? cachedShloka = prefs.getString('cached_wisdom_data');
     String? cachedDate = prefs.getString('cached_wisdom_date');
     
@@ -40,35 +35,68 @@ class WisdomService {
       return Map<String, dynamic>.from(jsonDecode(cachedShloka));
     }
 
+    // --- STEP 2: CLOUD SYNC CHECK (Fixes the multi-device issue) ---
+    final userDoc = await _db.collection('Users').doc(user.uid).get();
+    final userData = userDoc.data();
+    
+    // Check if another device already chose a shloka for today
+    if (userData?['LastWisdomDate'] == today && userData?['LastWisdomSource'] != null) {
+      final String cloudSource = userData!['LastWisdomSource'];
+      
+      // Fetch that specific shloka from the pool
+      final poolMatch = await _db.collection('WisdomPool')
+          .where('Source', isEqualTo: cloudSource)
+          .limit(1)
+          .get();
+
+      if (poolMatch.docs.isNotEmpty) {
+      // 1. Get the raw data from Firestore
+      final Map<String, dynamic> data = poolMatch.docs.first.data();
+      
+      // 2. CREATE A CLEAN COPY FOR LOCAL CACHE
+      // We convert Timestamps to ISO Strings so jsonEncode doesn't crash
+      final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
+      
+      if (localData['CreatedAt'] is Timestamp) {
+        localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
+      }
+      if (localData['DeleteAt'] is Timestamp) {
+        localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+      }
+
+      // 3. Sync to local cache using the CLEAN data
+      await prefs.setString('cached_wisdom_data', jsonEncode(localData));
+      await prefs.setString('cached_wisdom_date', today);
+      
+      return data; // Return the original data for the UI
+    }
+    }
+
     _performBackgroundCleanup();
 
-    // 1. Get user's seen list to avoid repeats
-    final userDoc = await _db.collection('Users').doc(user.uid).get();
-    List<dynamic> seenIds = userDoc.data()?['SeenWisdom'] ?? [];
+    // --- STEP 3: THE POOL CHECK (Standard logic if nothing found in Cloud) ---
+    List<dynamic> seenIds = userData?['SeenWisdom'] ?? [];
 
-    // 2. THE 365 DAYS LOGIC: Reset history once a year
     if (seenIds.length >= 365) {
       await _db.collection('Users').doc(user.uid).update({'SeenWisdom': []});
       seenIds = [];
     }
 
-    // 3. THE POOL CHECK: Check the last 50 shlokas in the global pool
     final poolSnapshot = await _db.collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
         .limit(50)
         .get();
     
-    // In Step 3: THE POOL CHECK
     for (var doc in poolSnapshot.docs) {
       final data = doc.data();
-      final source = data['Source']; // e.g., "Gita 2.47"
+      final source = data['Source'];
 
-      if (!seenIds.contains(source)) { // Check the Source, not the ID!
+      if (!seenIds.contains(source)) {
         return await _finalizeAndCache(user.uid, source, data, today, prefs);
       }
     }
 
-    // 4. THE GENERATION: If pool is exhausted, call Gemini
+    // --- STEP 4: GENERATION (Last resort) ---
     return await _generateNewWisdom(user.uid, today, prefs);
   }
 
@@ -90,15 +118,15 @@ class WisdomService {
       .catchError((e) => debugPrint("Cleanup failed: $e"));
     }
   // Helper to update History and Local Cache simultaneously
-  Future<Map<String, dynamic>> _finalizeAndCache(
-    String uid, String source, Map<String, dynamic> localData, String today, SharedPreferences prefs
-  ) async {
-    // 1. Update history in Cloud
+  Future<Map<String, dynamic>> _finalizeAndCache(String uid, String source, Map<String, dynamic> localData, String today, SharedPreferences prefs) async {
+    // Update the User document with the "Daily Choice" [2026-02-11] Capitalized
     await _db.collection('Users').doc(uid).update({
-      'SeenWisdom': FieldValue.arrayUnion([source])
+      'SeenWisdom': FieldValue.arrayUnion([source]),
+      'LastWisdomSource': source,
+      'LastWisdomDate': today,
     });
 
-    // 2. Save to Local Cache (Now it won't crash!)
+    // Save to Local Cache
     await prefs.setString('cached_wisdom_data', jsonEncode(localData));
     await prefs.setString('cached_wisdom_date', today);
 

@@ -54,8 +54,8 @@
 		</array>
 		<key>LSApplicationQueriesSchemes</key>
 		<array>
-		<string>tel</string>
-		<string>mailto</string>
+			<string>tel</string>
+			<string>mailto</string>
 		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>

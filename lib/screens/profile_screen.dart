@@ -144,6 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.transparent, // Keeps it transparent at rest
         elevation: 0, 
         scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
+        centerTitle: true,
         surfaceTintColor: Colors.transparent, // <--- THIS ensures no tint is applied
         iconTheme: IconThemeData(color: primaryColor),
       ),
