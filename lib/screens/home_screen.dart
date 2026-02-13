@@ -699,13 +699,13 @@ Future<void> _toggleSave() async {
           SizedBox(height: internalSpacing),
 
           // 1. SACRED REFERENCE (The Adhyay/Shlok part)
-          _buildInternalBlock("Reference", _wisdomData?['Source'] ?? '', sw, sh),
+          _buildInternalBlock("Scripture", _wisdomData?['Source'] ?? '', sw, sh),
           
           // 2. THE SHLOK (Sanskrit)
           _buildInternalBlock("Sacred Shlok", _wisdomData?['Shloka'] ?? '', sw, sh, isSanskrit: true, isItalic: true),
 
           // 3. THE MEANING (English)
-          _buildInternalBlock("Meaning", _wisdomData?['Meaning'] ?? '', sw, sh),
+          _buildInternalBlock("Translation", _wisdomData?['Meaning'] ?? '', sw, sh),
 
           // 4. MODERN RELEVANCE (Practical)
           _buildInternalBlock("Modern Relevance", _wisdomData?['Explanation'] ?? '', sw, sh, isJustified: true),
