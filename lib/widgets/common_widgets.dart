@@ -29,7 +29,7 @@ class SamskaraLogo extends StatelessWidget {
         ),
         SizedBox(height: size.height * 0.02), // 2% dynamic space
         Text(
-          "Awaken the\nWisdom Within",
+          "Awaken The\nWisdom Within",
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'Serif', 

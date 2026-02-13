@@ -84,20 +84,31 @@ class WisdomService {
 
     final poolSnapshot = await _db.collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
-        .limit(50)
+        .limit(150) // Increased limit to find a shloka the user hasn't seen yet
         .get();
     
-    for (var doc in poolSnapshot.docs) {
+    final unseenDocs = poolSnapshot.docs.where((doc) {
       final data = doc.data();
       final source = data['Source'];
+      return !seenIds.contains(source);
+    }).toList();
 
-      if (!seenIds.contains(source)) {
-        return await _finalizeAndCache(user.uid, source, data, today, prefs);
+    if (unseenDocs.isNotEmpty) {
+      unseenDocs.shuffle();
+      final selectedDoc = unseenDocs.first;
+      final data = selectedDoc.data();
+      final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
+      if (localData['CreatedAt'] is Timestamp) {
+        localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
       }
+      if (localData['DeleteAt'] is Timestamp) {
+        localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+      }
+      return await _finalizeAndCache(user.uid, data['Source'], localData, today, prefs);
     }
 
     // --- STEP 4: GENERATION (Last resort) ---
-    return await _generateNewWisdom(user.uid, today, prefs);
+    return await _generateNewWisdom(user.uid, today, prefs, seenIds);
   }
 
   void _performBackgroundCleanup() {
@@ -133,11 +144,20 @@ class WisdomService {
     return localData;
   }
 
-  Future<Map<String, dynamic>> _generateNewWisdom(String uid, String today, SharedPreferences prefs) async {
+  Future<Map<String, dynamic>> _generateNewWisdom(String uid, String today, SharedPreferences prefs, List<dynamic> seenIds) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    
+    // 1. Get last 50 entries to tell Gemini what to avoid
+    final existingPool = await _db.collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(50)
+        .get();
+    final List<String> exclusionList = existingPool.docs.map((d) => d['Source'] as String).toList();
+
     final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
-    for (String modelName in modelPriority) {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      for (String modelName in modelPriority) {
       try {
         final model = GenerativeModel(model: modelName, apiKey: apiKey);
         
@@ -153,6 +173,10 @@ class WisdomService {
 
           TASK:
           Generate one "Daily Wisdom" entry. You MUST rotate daily across these diverse sources so the user experiences spiritual, social, and leadership wisdom.
+
+          STRICT AVOIDANCE: Do not generate any shloka from these sources:
+          ${exclusionList.join(', ')}
+          ${seenIds.take(20).join(', ')}
 
           STRICT FORMATTING RULES:
           1. [REFERENCE]: State the scripture name clearly first. 
@@ -173,41 +197,65 @@ class WisdomService {
         final text = response.text;
 
         if (text != null && text.contains('[SHLOK]')) {
-          final expiryDate = DateTime.now().add(const Duration(days: 365));
+          final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
 
-          // 1. Create the data for the POOL (Includes Firestore-only commands)
+          // 1. DUPLICATE CHECK: Ensure user hasn't seen this in the last year
+          if (seenIds.contains(source)) {
+            debugPrint("Duplicate generated ($source). Retrying...");
+            continue;
+          }
+
+          // 2. POOL CHECK: Ensure we don't create duplicate entries in the global pool
+          final existingDocs = await _db.collection('WisdomPool')
+              .where('Source', isEqualTo: source)
+              .limit(1)
+              .get();
+
+          if (existingDocs.docs.isNotEmpty) {
+            // Use existing pool data
+            final data = existingDocs.docs.first.data();
+            
+            // Clean for local cache
+            final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
+            if (localData['CreatedAt'] is Timestamp) {
+              localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
+            }
+            if (localData['DeleteAt'] is Timestamp) {
+              localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+            }
+
+            return await _finalizeAndCache(uid, source, localData, today, prefs);
+          }
+
+          final now = DateTime.now();
+          final expiryDate = now.add(const Duration(days: 730));
+
+          // 1. Data for Firestore (Keep FieldValue here)
           final Map<String, dynamic> poolData = {
-            'Source': _extractSection(text, '[REFERENCE]', '[SHLOK]'),
+            'Source': source,
             'Shloka': _extractSection(text, '[SHLOK]', '[TRANSLATION]'),
             'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
             'Explanation': _extractSection(text, '[PRACTICAL]', null),
             'Date': today,
-            'CreatedAt': FieldValue.serverTimestamp(), // Firestore command
-            'DeleteAt': Timestamp.fromDate(expiryDate), // Firestore command
+            'CreatedAt': FieldValue.serverTimestamp(),
+            'DeleteAt': Timestamp.fromDate(expiryDate),
           };
 
-          // 2. Save to global pool
-          await _db.collection('WisdomPool').add(poolData);
-          
-          // 3. Create a clean version for LOCAL CACHE (No FieldValues)
-          // We convert the Firestore commands to standard strings/ints for JSON
+          // 2. WATERPROOF SAVE: This ensures uniqueness in the database
+          await _db.collection('WisdomPool').doc(source).set(poolData);
+
+          // 3. CLEAN COPY for Local Cache (Replace FieldValue with String)
           final Map<String, dynamic> localData = {
             ...poolData,
-            'CreatedAt': DateTime.now().toIso8601String(),
-            'DeleteAt': expiryDate.toIso8601String(),
+            'CreatedAt': now.toIso8601String(), // Valid for JSON
+            'DeleteAt': expiryDate.toIso8601String(), // Valid for JSON
           };
 
-          // Change the return line at the very end of _generateNewWisdom:
-          return await _finalizeAndCache(
-            uid, 
-            poolData['Source'], // ✅ Pass the text reference, not the ID
-            localData, 
-            today, 
-            prefs
-          );
+          return await _finalizeAndCache(uid, source, localData, today, prefs);
         }
       } catch (e) {
         debugPrint("Model $modelName failed: $e");
+      }
       }
     }
     return {};
