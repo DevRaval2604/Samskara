@@ -190,7 +190,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
             1. If the input appears to be gibberish, random keystrokes, or meaningless (e.g., "asdf", "sdhsh", "jkl"), reply gently asking the user to express their thought clearly.
             2. If the input is a greeting, a single word, or a short phrase with clear meaning (e.g., "hi", "sorry", "weird", "anger", "help"), reply warmly and wisely in plain text. Offer a brief thought or ask the user to elaborate. Do not use any tags.
             3. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
-            [REFERENCE] Adhyay X, Shlok Y
+            [REFERENCE] Adhyay X, Shloka Y
             [SHLOK] (The Sanskrit Verse)
             [TRANSLATION] (The English Translation)
             [PRACTICAL] (Practical, simple modern-day guidance)

@@ -28,8 +28,8 @@ class WisdomService {
     final prefs = await SharedPreferences.getInstance();
     
     // --- STEP 1: LOCAL CACHE CHECK (Fastest) ---
-    String? cachedShloka = prefs.getString('cached_wisdom_data');
-    String? cachedDate = prefs.getString('cached_wisdom_date');
+    String? cachedShloka = prefs.getString('cached_wisdom_data_${user.uid}');
+    String? cachedDate = prefs.getString('cached_wisdom_date_${user.uid}');
     
     if (cachedDate == today && cachedShloka != null) {
       return Map<String, dynamic>.from(jsonDecode(cachedShloka));
@@ -65,8 +65,8 @@ class WisdomService {
       }
 
       // 3. Sync to local cache using the CLEAN data
-      await prefs.setString('cached_wisdom_data', jsonEncode(localData));
-      await prefs.setString('cached_wisdom_date', today);
+      await prefs.setString('cached_wisdom_data_${user.uid}', jsonEncode(localData));
+      await prefs.setString('cached_wisdom_date_${user.uid}', today);
       
       return data; // Return the original data for the UI
     }
@@ -138,8 +138,8 @@ class WisdomService {
     });
 
     // Save to Local Cache
-    await prefs.setString('cached_wisdom_data', jsonEncode(localData));
-    await prefs.setString('cached_wisdom_date', today);
+    await prefs.setString('cached_wisdom_data_$uid', jsonEncode(localData));
+    await prefs.setString('cached_wisdom_date_$uid', today);
 
     return localData;
   }
@@ -180,12 +180,12 @@ class WisdomService {
 
           STRICT FORMATTING RULES:
           1. [REFERENCE]: State the scripture name clearly first. 
-             - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shlok Y"
+             - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shloka Y"
              - For Arthashastra: "Arthashastra - Book X, Chapter Y"
              - For Puranas: "[Name] Purana - Canto X, Chapter Y"
              - For Vedas: "[Name] Veda - Mandala X, Sukta Y"
              - For Upanishads: "[Name] Upanishad - Adhyay X, Valli Y"
-             - For Gita: "Bhagavad Gita - Adhyay X, Shlok Y"
+             - For Gita: "Bhagavad Gita - Adhyay X, Shloka Y"
           2. [SHLOK]: The Sanskrit Verse.
           3. [TRANSLATION]: The English Translation.
           4. [PRACTICAL]: Practical, simple modern-day guidance.
