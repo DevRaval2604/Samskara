@@ -320,10 +320,11 @@ class _SavedShlokasScreenState extends State<SavedShlokasScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.auto_stories_outlined, size: sw * 0.2, color: primaryColor.withValues(alpha: 0.3)),
+          Icon(Icons.history_edu_rounded, size: sw * 0.2, color: primaryColor.withValues(alpha: 0.3)),
           SizedBox(height: sh * 0.02),
           Text(
-            _searchQuery.isEmpty ? "No verses saved yet." : "No matching verses found.",
+            _searchQuery.isEmpty ? "Your wisdom treasury is\ncurrently empty." : "No such gem found in\nyour wisdom collection.",
+            textAlign: TextAlign.center,
             style: TextStyle(color: primaryColor, fontSize: sw * 0.045, fontFamily: 'Serif'),
           ),
         ],
