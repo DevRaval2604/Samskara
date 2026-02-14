@@ -340,7 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             SizedBox(height: sh * 0.02),
             const SamskaraLogo(), 
-            SizedBox(height: sh * 0.05),
+            SizedBox(height: sh * 0.04),
 
             Padding(
               padding: EdgeInsets.symmetric(horizontal: sw * 0.06),

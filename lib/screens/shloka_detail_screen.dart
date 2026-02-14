@@ -130,7 +130,7 @@ class _ShlokaDetailScreenState extends State<ShlokaDetailScreen> {
                 children: [
                   Icon(Icons.auto_stories_rounded, color: primaryColor, size: sw * 0.05),
                   SizedBox(width: sw * 0.02),
-                  _buildSectionTitle("Sacred Shlok", sw),
+                  _buildSectionTitle("Sacred Shloka", sw),
                 ],
               ),
               _buildSectionContent(widget.data['Shloka'], sw, sh, isItalic: true),

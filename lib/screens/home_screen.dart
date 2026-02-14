@@ -633,7 +633,7 @@ Future<void> _toggleSave() async {
           children: [
             SizedBox(height: sh * 0.02),
             const SamskaraLogo(),
-            SizedBox(height: sh * 0.05),
+            SizedBox(height: sh * 0.04),
 
             _buildWisdomCard(sw, sh),
             
@@ -702,7 +702,7 @@ Future<void> _toggleSave() async {
           _buildInternalBlock("Scripture", _wisdomData?['Source'] ?? '', sw, sh),
           
           // 2. THE SHLOK (Sanskrit)
-          _buildInternalBlock("Sacred Shlok", _wisdomData?['Shloka'] ?? '', sw, sh, isSanskrit: true, isItalic: true),
+          _buildInternalBlock("Sacred Shloka", _wisdomData?['Shloka'] ?? '', sw, sh, isSanskrit: true, isItalic: true),
 
           // 3. THE MEANING (English)
           _buildInternalBlock("Translation", _wisdomData?['Meaning'] ?? '', sw, sh),

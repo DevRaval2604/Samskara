@@ -50,7 +50,7 @@ class AboutUsScreen extends StatelessWidget {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: sw * 0.02), // Extra breathing room for justification
               child: Text(
-                "Samskara is more than an app; it is a bridge between the eternal and the everyday. We believe that the depth of our heritage holds the keys to modern peace. Our mission is to curate the profound essence of Indian culture—from the wisdom of the Gita and the rhythm of our sacred festivals to the valor of our icons—and present it as a living guide for the contemporary soul.",
+                "Samskara is more than an app; it is a bridge between the eternal and the everyday. We believe that the depth of our heritage holds the keys to modern peace. Our mission is to curate the profound essence of Indian culture—from the wisdom of the Gita and the daily ritual of a sacred shloka, to the rhythm of our festivals and the valor of our icons—and present it as a living guide for the contemporary soul.",
                 textAlign: TextAlign.justify, // Changes from center to justified
                 style: TextStyle(
                   color: primaryColor.withValues(alpha: 0.8),
@@ -68,6 +68,13 @@ class AboutUsScreen extends StatelessWidget {
             // 2. THE PILLARS (Based on your notes)
             _buildSectionHeader("The Samskara Experience", sw),
             SizedBox(height: sh * 0.03),
+
+            _buildValuePoint(
+              "Nourishment for the Soul", 
+              "True growth doesn't come from a single feast, but from a daily drop of nectar. By delivering a solitary, focused spark of wisdom every day, we transform ancient philosophy into a sustainable spiritual habit for the modern mind.", 
+              sw
+            ),
+            SizedBox(height: sh * 0.025),
             
             _buildValuePoint(
               "Bridging Eras with Intelligence", 

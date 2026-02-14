@@ -13,6 +13,7 @@ class AskTheGitaScreen extends StatefulWidget {
 class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   
   String? _shlok;
   String? _translation;
@@ -21,10 +22,68 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   String? _simpleResponse;
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_scrollToBottomOnFocus);
+  }
+
+  void _scrollToBottomOnFocus() {
+    if (_focusNode.hasFocus) {
+      if (_simpleResponse == null && _shlok == null) {
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _focusNode.removeListener(_scrollToBottomOnFocus);
+    _scrollController.dispose();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _resetScreen() {
+    _focusNode.unfocus();
+    setState(() {
+      _controller.clear();
+      _shlok = null;
+      _translation = null;
+      _verseRef = null;
+      _interpretation = null;
+      _simpleResponse = null;
+    });
+  }
+
+  void _onTextChanged(String value) {
+    if (_simpleResponse != null || _shlok != null) {
+      setState(() {
+        _shlok = null;
+        _translation = null;
+        _verseRef = null;
+        _interpretation = null;
+        _simpleResponse = null;
+      });
+
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   void _showCustomSnackBar(String message) {
@@ -72,7 +131,6 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   Future<void> _getGitaWisdom() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
-
     _focusNode.unfocus();
 
     if (query.length < 2 || !RegExp(r'[a-zA-Z]').hasMatch(query)) {
@@ -206,6 +264,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
       child: Scaffold(
         backgroundColor: backgroundColor,
         body: SingleChildScrollView(
+          controller: _scrollController,
           child: Column(
             children: [
               SizedBox(height: sh * 0.02),
@@ -233,23 +292,44 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
                           hintStyle: TextStyle(color: primaryColor.withValues(alpha: 0.4)),
                           border: InputBorder.none,
                         ),
+                        onChanged: _onTextChanged,
                       ),
                       SizedBox(height: sh * 0.02),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            disabledBackgroundColor: primaryColor,
-                            foregroundColor: backgroundColor,
-                            disabledForegroundColor: backgroundColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(sw * 0.03)),
-                            padding: EdgeInsets.symmetric(vertical: sh * 0.015),
-                            elevation: 0,
-                          ),
-                          onPressed: _getGitaWisdom,
-                          child: Text("Get Gita Wisdom", style: TextStyle(fontSize: sw * 0.045, fontWeight: FontWeight.bold)),
-                        ),
+                        child: (_simpleResponse != null || _shlok != null)
+                            ? ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  disabledBackgroundColor: primaryColor,
+                                  foregroundColor: backgroundColor,
+                                  disabledForegroundColor: backgroundColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(sw * 0.03)),
+                                  padding: EdgeInsets.symmetric(vertical: sh * 0.015),
+                                  elevation: 0,
+                                ),
+                                onPressed: _resetScreen,
+                                child: Text("Reset",
+                                    style: TextStyle(
+                                        fontSize: sw * 0.045, fontWeight: FontWeight.bold)),
+                              )
+                            : ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  disabledBackgroundColor: primaryColor,
+                                  foregroundColor: backgroundColor,
+                                  disabledForegroundColor: backgroundColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(sw * 0.03)),
+                                  padding: EdgeInsets.symmetric(vertical: sh * 0.015),
+                                  elevation: 0,
+                                ),
+                                onPressed: _getGitaWisdom,
+                                child: Text("Get Gita Wisdom",
+                                    style: TextStyle(
+                                        fontSize: sw * 0.045, fontWeight: FontWeight.bold)),
+                              ),
                       ),
                     ],
                   ),
@@ -261,6 +341,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
                 _buildResponseCard(sw, sh),
                 SizedBox(height: sh * 0.04),
               ],
+              SizedBox(height: sh * 0.02),
             ],
           ),
         ),
@@ -274,14 +355,16 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
     final double internalSpacing = sh * 0.015;
 
     List<Widget> contentWidgets = [];
+    String outerTitle = "GITA'S WISDOM";
 
     if (_simpleResponse != null) {
-      contentWidgets.add(_buildInternalBlock("Guide's Reply", _simpleResponse!, sw, sh, isJustified: true));
+      outerTitle = "GUIDE'S REPLY";
+      contentWidgets.add(_buildInternalBlock("", _simpleResponse!, sw, sh, isJustified: true));
     } else if (_shlok != null) {
       if (_verseRef != null) {
-        contentWidgets.add(_buildInternalBlock("Gita Adhyay & Shlok", _verseRef!, sw, sh));
+        contentWidgets.add(_buildInternalBlock("Gita Adhyay & Shloka", _verseRef!, sw, sh));
       }
-      contentWidgets.add(_buildInternalBlock("Sacred Shlok", _shlok!, sw, sh, isSanskrit: true, isItalic: true));
+      contentWidgets.add(_buildInternalBlock("Sacred Shloka", _shlok!, sw, sh, isSanskrit: true, isItalic: true));
       contentWidgets.add(_buildInternalBlock("Translation", _translation!, sw, sh));
       contentWidgets.add(_buildInternalBlock("Practical Guidance", _interpretation!, sw, sh, isJustified: true));
     }
@@ -303,7 +386,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
           // MAIN TITLE
           Center(
             child: Text(
-              "GITA'S WISDOM",
+              outerTitle,
               style: TextStyle(
                 color: primaryColor,
                 fontSize: sw * 0.030,
@@ -337,14 +420,16 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
         ),
         child: Column(
           children: [
-            Text(title.toUpperCase(), 
-              style: TextStyle(
-                color: primaryColor, 
-                fontWeight: FontWeight.bold, 
-                fontSize: sw * 0.030, // Smaller, uniform title
-                letterSpacing: 1.0
-              )),
-            SizedBox(height: sh * 0.006),
+            if (title.isNotEmpty) ...[
+              Text(title.toUpperCase(), 
+                style: TextStyle(
+                  color: primaryColor, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: sw * 0.030, // Smaller, uniform title
+                  letterSpacing: 1.0
+                )),
+              SizedBox(height: sh * 0.006),
+            ],
             SelectableText(
               content,
               textAlign: isJustified ? TextAlign.justify : TextAlign.center,

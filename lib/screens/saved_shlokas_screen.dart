@@ -189,7 +189,7 @@ class _SavedShlokasScreenState extends State<SavedShlokasScreen> {
         controller: _searchController,
         style: TextStyle(color: primaryColor, fontSize: sw * 0.04),
         decoration: InputDecoration(
-          hintText: "Search your saved verses...",
+          hintText: "Search your saved wisdoms...",
           hintStyle: TextStyle(color: primaryColor.withValues(alpha: 0.4), fontSize: sw * 0.035),
           prefixIcon: Icon(Icons.search, color: primaryColor.withValues(alpha: 0.5), size: sw * 0.05),
           suffixIcon: _searchQuery.isNotEmpty 
