@@ -55,50 +55,31 @@ class ContactUsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      // RESTORED: Profile-style Centering Logic
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: SizedBox(
-                  width: double.infinity, 
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center, // Vertically center
-                    crossAxisAlignment: CrossAxisAlignment.center, // Horizontally center
-                    children: [
-                      SizedBox(height: sh * 0.02),
-                      const SamskaraLogo(),
-                      SizedBox(height: sh * 0.04),
-                      
-                      _buildContactCard(
-                        context,
-                        sw,
-                        name: "Dev Raval",
-                        email: "devraval2004@gmail.com",
-                        phone: "+91 99043 25939",
-                      ),
-
-                      SizedBox(height: sh * 0.03),
-
-                      _buildContactCard(
-                        context,
-                        sw,
-                        name: "Himani Shah",
-                        email: "shahhimani703@gmail.com",
-                        phone: "+91 79843 73949",
-                      ),
-                      
-                      SizedBox(height: sh * 0.04),
-                    ],
-                  ),
-                ),
-              ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: sw * 0.07),
+        child: Column(
+          children: [
+            SizedBox(height: sh * 0.02),
+            const SamskaraLogo(),
+            SizedBox(height: sh * 0.04),
+            _buildContactCard(
+              context,
+              sw,
+              name: "Dev Raval",
+              email: "devraval2004@gmail.com",
+              phone: "+91 99043 25939",
             ),
-          );
-        },
+            SizedBox(height: sh * 0.03),
+            _buildContactCard(
+              context,
+              sw,
+              name: "Himani Shah",
+              email: "shahhimani703@gmail.com",
+              phone: "+91 79843 73949",
+            ),
+            SizedBox(height: sh * 0.04),
+          ],
+        ),
       ),
     );
   }
@@ -106,7 +87,7 @@ class ContactUsScreen extends StatelessWidget {
   Widget _buildContactCard(BuildContext context, double sw, 
       {required String name, required String email, required String phone}) {
     return Container(
-      width: sw * 0.85,
+      width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: sw * 0.06, horizontal: sw * 0.06),
       decoration: BoxDecoration(
         color: backgroundColor,
