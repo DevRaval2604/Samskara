@@ -15,7 +15,7 @@ class AboutUsScreen extends StatelessWidget {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text('About Us', 
-          style: TextStyle(color: primaryColor, fontFamily: 'Serif', fontWeight: FontWeight.bold)
+          style: TextStyle(color: primaryColor, fontFamily: 'Serif', fontWeight: FontWeight.bold, fontSize: sw * 0.06)
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,

@@ -213,8 +213,8 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
 
   Widget _buildFilterBar(double sw, double sh) {
     return Container(
-      height: sh * 0.06,
-      margin: EdgeInsets.symmetric(vertical: sh * 0.01),
+      height: sh * 0.05,
+      margin: EdgeInsets.symmetric(vertical: sh * 0.005),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: sw * 0.05),
@@ -223,7 +223,7 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
           final region = _regions[index];
           final isSelected = _selectedRegion == region;
           return Padding(
-            padding: EdgeInsets.only(right: sw * 0.03),
+            padding: EdgeInsets.only(right: sw * 0.02),
             child: ChoiceChip(
               label: Text(region),
               selected: isSelected,
@@ -244,11 +244,12 @@ class _FestiveListScreenState extends State<FestiveListScreen> {
               backgroundColor: Colors.transparent,
               labelStyle: TextStyle(
                 color: isSelected ? backgroundColor : primaryColor,
-                fontSize: sw * 0.035
+                fontSize: sw * 0.03,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(sw * 0.02),
-                side: BorderSide(color: primaryColor.withValues(alpha: 0.3))
+                side: BorderSide(color: primaryColor.withValues(alpha: 0.2))
               ),
               showCheckmark: false,
             ),
