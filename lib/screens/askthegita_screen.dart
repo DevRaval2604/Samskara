@@ -10,7 +10,7 @@ class AskTheGitaScreen extends StatefulWidget {
   State<AskTheGitaScreen> createState() => _AskTheGitaScreenState();
 }
 
-class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
+class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -24,14 +24,22 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_scrollToBottomOnFocus);
+    WidgetsBinding.instance.addObserver(this);
+    // We now rely on didChangeMetrics, so the focus listener is no longer needed for scrolling.
   }
 
-  void _scrollToBottomOnFocus() {
-    if (_focusNode.hasFocus) {
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    final bottomInset = View.of(context).viewInsets.bottom;
+    if (bottomInset > 0 && _focusNode.hasFocus) {
       if (_simpleResponse == null && _shlok == null) {
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (mounted) {
+        // By using a post-frame callback, we wait until the layout is
+        // finalized before starting the scroll animation. This prevents
+        // the keyboard animation and scroll animation from fighting,
+        // resulting in a much smoother (less laggy) experience.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients) {
             _scrollController.animateTo(
               _scrollController.position.maxScrollExtent,
               duration: const Duration(milliseconds: 300),
@@ -45,7 +53,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
 
   @override
   void dispose() {
-    _focusNode.removeListener(_scrollToBottomOnFocus);
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _controller.dispose();
     _focusNode.dispose();
@@ -74,8 +82,10 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> {
         _simpleResponse = null;
       });
 
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
+      // Schedule the scroll to happen after the UI has rebuilt without the response card.
+      // This is more reliable and smoother than a fixed timer.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 300),

@@ -194,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Row(
                     children: [
                       _buildGridItem(
-                        Icons.book_outlined, 
+                        Icons.auto_stories_outlined, 
                         "Saved Stories", 
                         sw, 
                         sh, 
@@ -224,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                       ),
                       SizedBox(width: sw * 0.04),
-                      _buildGridItem(Icons.description_outlined, "Saved Shlokas", sw, sh, () {
+                      _buildGridItem(Icons.history_edu_outlined, "Saved Shlokas", sw, sh, () {
                         // Navigating to SavedStoriesScreen with your 200ms EaseOut animation
                           Navigator.push(
                             context,
