@@ -16,7 +16,7 @@ An AI-driven interface that allows users to seek spiritual guidance directly fro
 * **Intelligent Interpretation:** Powered by `gemini-3-flash` to provide contextually accurate shlokas for real-world problems.
 * **Modern Relevance:** Every response bridges the gap between ancient Sanskrit wisdom and actionable advice for today’s challenges.
 
-### 📜 Stories of India
+### 📖 Stories of India
 An immersive digital library documenting the true **Itihasa** (History) and heritage of Bharat. This section is strictly dedicated to factual narratives and historical legacies.
 * **Historical Grit:** Deep dives into the lives of **Great Rulers**, **Freedom Fighters**, and the strategic brilliance of **Legendary Battles**.
 * **Unsung Legacies:** Bringing to light **Forgotten Heroes** and the groundbreaking contributions of **Ancient Science and Scholars**.
