@@ -214,7 +214,7 @@ class _FestivalDetailScreenState extends State<FestivalDetailScreen> {
       children: [
         Row(
           children: [
-            Icon(Icons.psychology_rounded, color: primaryColor, size: sw * 0.05),
+            Icon(Icons.balance_rounded, color: primaryColor, size: sw * 0.05),
             SizedBox(width: sw * 0.02),
             _buildSectionTitle("Modern Relevance", sw),
             // --- THE BADGE GOES HERE ---
@@ -248,7 +248,7 @@ class _FestivalDetailScreenState extends State<FestivalDetailScreen> {
       title,
       style: TextStyle(
         color: primaryColor,
-        fontSize: sw * 0.055,
+        fontSize: sw * 0.05,
         fontWeight: FontWeight.bold,
         fontFamily: 'Serif',
         letterSpacing: 0.5,
