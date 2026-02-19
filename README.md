@@ -66,6 +66,7 @@ The app is built with a sophisticated **Dimension-Driven UI** philosophy.
 2.  **Firebase Configuration:**
     * Add `google-services.json` to `android/app/`.
     * Add `GoogleService-Info.plist` to `ios/Runner/`.
+    
 3.  **Environment Variables:**
     * Create a `.env` file in the root directory.
     * Add your **Gemini API Key** using the following key name:
