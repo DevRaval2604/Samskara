@@ -39,7 +39,7 @@ A personalized daily routine featuring a handpicked Shloka to center your mind.
 The app is built with a sophisticated **Dimension-Driven UI** philosophy. 
 
 * **`MediaQuery.sizeOf(context)` Integration:** To maximize performance, the app utilizes `MediaQuery.sizeOf(context)` to fetch device dimensions. This ensures that widgets only rebuild when the specific size properties change, avoiding unnecessary rebuilds.
-* **Dynamic Scaling:** Every element—from the "Ask the Gita" chat bubbles to the "Festival" and "Story" cards—calculates its scale dynamically using the device's **Width** and **Height**. 
+* **Dynamic Scaling:** Every element—from the "Ask the Gita" guidance interface to the "Festival" and "Story" cards—calculates its scale dynamically using the device's **Width** and **Height**. 
 * **Flexible Grids:** Content containers are mathematically scaled to ensure text readability remains perfectly consistent across all screen sizes and densities without the use of static assets.
 
 ---
@@ -48,7 +48,8 @@ The app is built with a sophisticated **Dimension-Driven UI** philosophy.
 
 | Layer | Technology |
 | :--- | :--- |
-| **Framework** | Flutter (Dart 3.x) |
+| **Framework** | Flutter 3.41+ (Stable) |
+| **Language** | Dart 3.11+ |
 | **Backend** | Firebase (Auth & Firestore) |
 | **AI Integration** | Google Gemini 3 Flash API |
 | **Architecture** | Service-Oriented Architecture (Future/StreamBuilders) |
@@ -66,7 +67,11 @@ The app is built with a sophisticated **Dimension-Driven UI** philosophy.
     * Add `google-services.json` to `android/app/`.
     * Add `GoogleService-Info.plist` to `ios/Runner/`.
 3.  **Environment Variables:**
-    * Configure your **Gemini API Key** in your project’s secure storage or `.env` file.
+    * Create a `.env` file in the root directory.
+    * Add your **Gemini API Key** using the following key name:
+    ```bash
+    GEMINI_API_KEY=your_api_key_here
+    ```
 4.  **Build and Launch:**
     ```bash
     flutter pub get
@@ -80,4 +85,4 @@ The UI is inspired by traditional Indian aesthetics blended with clean, modern d
 ---
 
 ### Developed with ❤️ by Dev Raval
-*Project Finalized: February 13, 2026*
+*Project Finalized: February 19, 2026*

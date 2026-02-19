@@ -21,42 +21,53 @@ class WisdomService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>> getDailyWisdom() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return {};
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return {};
 
-    final String today = DateTime.now().toIso8601String().split('T')[0];
-    final prefs = await SharedPreferences.getInstance();
-    
-    // --- STEP 1: LOCAL CACHE CHECK (Fastest) ---
-    String? cachedShloka = prefs.getString('cached_wisdom_data_${user.uid}');
-    String? cachedDate = prefs.getString('cached_wisdom_date_${user.uid}');
-    
-    if (cachedDate == today && cachedShloka != null) {
-      return Map<String, dynamic>.from(jsonDecode(cachedShloka));
+  final prefs = await SharedPreferences.getInstance();
+  
+  // --- NEW STEP 0: FETCH CLOUD TRUTH FIRST ---
+  // We need the cloud data to verify if the phone date is fake/reset
+  final userDoc = await _db.collection('Users').doc(user.uid).get();
+  final userData = userDoc.data();
+  
+  // Get phone date
+  String today = DateTime.now().toIso8601String().split('T')[0];
+  
+  // DATE RESET PROTECTION:
+  // If phone says it's Feb 1st, but Cloud says user already saw Feb 19th...
+  // We force 'today' to be Feb 19th. They can't go backwards.
+  if (userData != null && userData['LastWisdomDate'] != null) {
+    String lastCloudDate = userData['LastWisdomDate'];
+    if (today.compareTo(lastCloudDate) < 0) {
+      today = lastCloudDate; 
     }
+  }
 
-    // --- STEP 2: CLOUD SYNC CHECK (Fixes the multi-device issue) ---
-    final userDoc = await _db.collection('Users').doc(user.uid).get();
-    final userData = userDoc.data();
+  // --- STEP 1: LOCAL CACHE CHECK ---
+  // Now we check cache using our "verified" today string
+  String? cachedShloka = prefs.getString('cached_wisdom_data_${user.uid}');
+  String? cachedDate = prefs.getString('cached_wisdom_date_${user.uid}');
+  
+  if (cachedDate == today && cachedShloka != null) {
+    return Map<String, dynamic>.from(jsonDecode(cachedShloka));
+  }
+
+  // --- STEP 2: CLOUD SYNC CHECK ---
+  // (Logic remains same, but uses our verified 'today')
+  if (userData?['LastWisdomDate'] == today && userData?['LastWisdomSource'] != null) {
+    final String cloudSource = userData!['LastWisdomSource'];
     
-    // Check if another device already chose a shloka for today
-    if (userData?['LastWisdomDate'] == today && userData?['LastWisdomSource'] != null) {
-      final String cloudSource = userData!['LastWisdomSource'];
-      
-      // Fetch that specific shloka from the pool
-      final poolMatch = await _db.collection('WisdomPool')
-          .where('Source', isEqualTo: cloudSource)
-          .limit(1)
-          .get();
+    final poolMatch = await _db.collection('WisdomPool')
+        .where('Source', isEqualTo: cloudSource)
+        .limit(1)
+        .get();
 
-      if (poolMatch.docs.isNotEmpty) {
-      // 1. Get the raw data from Firestore
+    if (poolMatch.docs.isNotEmpty) {
       final Map<String, dynamic> data = poolMatch.docs.first.data();
-      
-      // 2. CREATE A CLEAN COPY FOR LOCAL CACHE
-      // We convert Timestamps to ISO Strings so jsonEncode doesn't crash
       final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
       
+      // Clean Timestamps for JSON
       if (localData['CreatedAt'] is Timestamp) {
         localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
       }
@@ -64,56 +75,61 @@ class WisdomService {
         localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
       }
 
-      // 3. Sync to local cache using the CLEAN data
       await prefs.setString('cached_wisdom_data_${user.uid}', jsonEncode(localData));
       await prefs.setString('cached_wisdom_date_${user.uid}', today);
       
-      return data; // Return the original data for the UI
+      return data; 
     }
-    }
-
-    _performBackgroundCleanup();
-
-    // --- STEP 3: THE POOL CHECK (Standard logic if nothing found in Cloud) ---
-    List<dynamic> seenIds = userData?['SeenWisdom'] ?? [];
-
-    if (seenIds.length >= 365) {
-      await _db.collection('Users').doc(user.uid).update({'SeenWisdom': []});
-      seenIds = [];
-    }
-
-    final poolSnapshot = await _db.collection('WisdomPool')
-        .orderBy('CreatedAt', descending: true)
-        .limit(150) // Increased limit to find a shloka the user hasn't seen yet
-        .get();
-    
-    final unseenDocs = poolSnapshot.docs.where((doc) {
-      final data = doc.data();
-      final source = data['Source'];
-      return !seenIds.contains(source);
-    }).toList();
-
-    if (unseenDocs.isNotEmpty) {
-      unseenDocs.shuffle();
-      final selectedDoc = unseenDocs.first;
-      final data = selectedDoc.data();
-      final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
-      if (localData['CreatedAt'] is Timestamp) {
-        localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
-      }
-      if (localData['DeleteAt'] is Timestamp) {
-        localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
-      }
-      return await _finalizeAndCache(user.uid, data['Source'], localData, today, prefs);
-    }
-
-    // --- STEP 4: GENERATION (Last resort) ---
-    return await _generateNewWisdom(user.uid, today, prefs, seenIds);
   }
 
-  void _performBackgroundCleanup() {
+  _performBackgroundCleanup(today);
+
+  // --- STEP 3: THE POOL CHECK ---
+  List<dynamic> seenIds = userData?['SeenWisdom'] ?? [];
+
+  if (seenIds.length >= 365) {
+    await _db.collection('Users').doc(user.uid).update({'SeenWisdom': []});
+    seenIds = [];
+  }
+
+  final poolSnapshot = await _db.collection('WisdomPool')
+      .orderBy('CreatedAt', descending: true)
+      .limit(150)
+      .get();
+  
+  final unseenDocs = poolSnapshot.docs.where((doc) {
+    final data = doc.data();
+    final source = data['Source'];
+    return !seenIds.contains(source);
+  }).toList();
+
+  if (unseenDocs.isNotEmpty) {
+    unseenDocs.shuffle();
+    final selectedDoc = unseenDocs.first;
+    final data = selectedDoc.data();
+    
+    // Clean for cache
+    final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
+    if (localData['CreatedAt'] is Timestamp) {
+      localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
+    }
+    if (localData['DeleteAt'] is Timestamp) {
+      localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+    }
+    
+    return await _finalizeAndCache(user.uid, data['Source'], localData, today, prefs);
+  }
+
+  // --- STEP 4: GENERATION ---
+  return await _generateNewWisdom(user.uid, today, prefs, seenIds);
+}
+
+  void _performBackgroundCleanup(String verifiedToday) {
+    // Convert our verified string back to a Timestamp for the query
+    DateTime verifiedDate = DateTime.parse(verifiedToday);
+    Timestamp verifiedTimestamp = Timestamp.fromDate(verifiedDate);
       _db.collection('WisdomPool')
-      .where('DeleteAt', isLessThan: Timestamp.now())
+      .where('DeleteAt', isLessThan: verifiedTimestamp)
       .limit(20) // Clean 20 at a time for high efficiency
       .get()
       .then((snapshot) {
