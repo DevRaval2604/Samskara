@@ -11,7 +11,7 @@
 
 ## 🌟 Core Feature Pillars
 
-### 📖 Ask the Gita
+### 🧠 Ask the Gita
 An AI-driven interface that allows users to seek spiritual guidance directly from the **Bhagavad Gita**.
 * **Intelligent Interpretation:** Powered by `gemini-3-flash` to provide contextually accurate shlokas for real-world problems.
 * **Modern Relevance:** Every response bridges the gap between ancient Sanskrit wisdom and actionable advice for today’s challenges.
@@ -22,7 +22,7 @@ An immersive digital library documenting the true **Itihasa** (History) and heri
 * **Unsung Legacies:** Bringing to light **Forgotten Heroes** and the groundbreaking contributions of **Ancient Science and Scholars**.
 * **Focused Experience:** A clean, high-performance UI designed for deep historical learning and reflection.
 
-### ✨ Indian Festivals
+### 🎉 Indian Festivals
 A comprehensive, real-time guide to the diverse festivals of the Indian subcontinent.
 * **Cultural & Modern Context:** Deep dives into the astronomical and spiritual significance of each festival, including its **Modern Relevance** in today's society.
 * **Ritual Guides:** Clear explanations of traditional practices and the historical events behind the celebrations.
