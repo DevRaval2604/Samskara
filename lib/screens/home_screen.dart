@@ -706,7 +706,7 @@ Future<void> _toggleSave() async {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
-                  _isSaved ? Icons.bookmark : Icons.bookmark_border_rounded, 
+                  _isSaved ? Icons.bookmark : Icons.bookmark_outline, 
                   color: primaryColor, 
                   size: sw * 0.055
                 ),
