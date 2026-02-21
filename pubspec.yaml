@@ -33,6 +33,7 @@ flutter:
     - assets/Logo.PNG
     - assets/Splash.PNG
     - assets/google_logo.png
+    - assets/IOSlogo.png
     - .env
 
 flutter_native_splash:
@@ -48,7 +49,7 @@ flutter_launcher_icons:
   ios: true
   android: true
   image_path_android: assets/Logo.PNG
-  image_path_ios: assets/Splash.PNG
+  image_path_ios: assets/IOSlogo.png
   remove_alpha_ios: true
   adaptive_icon_background: "#F8F4E9"
-  adaptive_icon_foreground: assets/Splash.PNG
+  adaptive_icon_foreground: assets/IOSlogo.png
