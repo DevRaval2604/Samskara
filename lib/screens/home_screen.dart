@@ -713,7 +713,7 @@ Future<void> _toggleSave() async {
               // 1. GHOST WIDGET (Left side)
               // This perfectly balances the width of the icon button on the right
               // so the text stays in the exact middle.
-              SizedBox(width: sw * 0.08), 
+              SizedBox(width: sw * 0.1), 
 
               // 2. CENTERED TEXT
               Expanded(
@@ -731,14 +731,20 @@ Future<void> _toggleSave() async {
               ),
 
               // 3. ACTION BUTTONS (Right side)
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  _isSaved ? Icons.bookmark : Icons.bookmark_outline, 
-                  color: primaryColor, 
-                  size: sw * 0.055
+              // CONSTRAINED ACTION BUTTON (Prevents vertical stretching)
+              SizedBox(
+                width: sw * 0.1,
+                height: sw * 0.05, 
+                child: IconButton(
+                  padding: EdgeInsets.zero, 
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    _isSaved ? Icons.bookmark : Icons.bookmark_outline, 
+                    color: primaryColor, 
+                    size: sw * 0.055
+                  ),
+                  onPressed: _toggleSave,
                 ),
-                onPressed: _toggleSave, // Using the new toggle save logic
               ),
             ],
           ),
