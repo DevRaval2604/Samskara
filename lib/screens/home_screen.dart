@@ -50,7 +50,13 @@ class WisdomService {
   String? cachedDate = prefs.getString('cached_wisdom_date_${user.uid}');
   
   if (cachedDate == today && cachedShloka != null) {
-    return Map<String, dynamic>.from(jsonDecode(cachedShloka));
+    final data = Map<String, dynamic>.from(jsonDecode(cachedShloka));
+    final savedCheck = await _db.collection('Users').doc(user.uid)
+        .collection('SavedShlokas').doc(data['Source']).get();
+    return {
+      ...data,
+      'isInitiallySaved': savedCheck.exists,
+    };
   }
 
   // --- STEP 2: CLOUD SYNC CHECK ---
@@ -78,11 +84,18 @@ class WisdomService {
       await prefs.setString('cached_wisdom_data_${user.uid}', jsonEncode(localData));
       await prefs.setString('cached_wisdom_date_${user.uid}', today);
       
-      return data; 
+      final savedCheck = await _db.collection('Users').doc(user.uid)
+          .collection('SavedShlokas').doc(data['Source']).get();
+      return {
+        ...data,
+        'isInitiallySaved': savedCheck.exists,
+      }; 
     }
   }
 
-  _performBackgroundCleanup(today);
+  // NEW: This ensures the cleanup runs in the background without 
+  // slowing down the retrieval of today's shloka.
+  Future.microtask(() => _performBackgroundCleanup(today));
 
   // --- STEP 3: THE POOL CHECK ---
   List<dynamic> seenIds = userData?['SeenWisdom'] ?? [];
@@ -100,7 +113,13 @@ class WisdomService {
   final unseenDocs = poolSnapshot.docs.where((doc) {
     final data = doc.data();
     final source = data['Source'];
-    return !seenIds.contains(source);
+    // ADD THIS PROTECTION: Check if the shloka is expired
+    // This ensures Year 3 is 100% fresh even if cleanup is still running
+    final Timestamp? deleteAt = data['DeleteAt'] as Timestamp?;
+    final bool isExpired = deleteAt != null && 
+        deleteAt.toDate().isBefore(DateTime.now());
+
+    return !seenIds.contains(source) && !isExpired; // Updated return
   }).toList();
 
   if (unseenDocs.isNotEmpty) {
@@ -125,12 +144,10 @@ class WisdomService {
 }
 
   void _performBackgroundCleanup(String verifiedToday) {
-    // Convert our verified string back to a Timestamp for the query
-    DateTime verifiedDate = DateTime.parse(verifiedToday);
-    Timestamp verifiedTimestamp = Timestamp.fromDate(verifiedDate);
+    Timestamp actualNow = Timestamp.now();
       _db.collection('WisdomPool')
-      .where('DeleteAt', isLessThan: verifiedTimestamp)
-      .limit(20) // Clean 20 at a time for high efficiency
+      .where('DeleteAt', isLessThan: actualNow)
+      .limit(450) // Clean 20 at a time for high efficiency
       .get()
       .then((snapshot) {
         if (snapshot.docs.isNotEmpty) {
@@ -157,7 +174,12 @@ class WisdomService {
     await prefs.setString('cached_wisdom_data_$uid', jsonEncode(localData));
     await prefs.setString('cached_wisdom_date_$uid', today);
 
-    return localData;
+    final savedCheck = await _db.collection('Users').doc(uid)
+        .collection('SavedShlokas').doc(source).get();
+    return {
+      ...localData,
+      'isInitiallySaved': savedCheck.exists,
+    };
   }
 
   Future<Map<String, dynamic>> _generateNewWisdom(String uid, String today, SharedPreferences prefs, List<dynamic> seenIds) async {
@@ -214,6 +236,15 @@ class WisdomService {
 
         if (text != null && text.contains('[SHLOK]')) {
           final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+
+          // After extracting the 'source' from Gemini...
+          final savedCheck = await _db.collection('Users').doc(uid)
+              .collection('SavedShlokas').doc(source).get();
+
+          if (savedCheck.exists) {
+            debugPrint("User already has $source in their permanent Saved list. Retrying generation...");
+            continue; // This forces Gemini to try a different shloka
+          }
 
           // 1. DUPLICATE CHECK: Ensure user hasn't seen this in the last year
           if (seenIds.contains(source)) {
@@ -377,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final sw = MediaQuery.sizeOf(context).width;
 
     final List<Widget> pages = [
-      _HomeTab(isLoading: _isLoading),
+      _HomeTab(isLoading: _isLoading, initialWisdom: widget.initialWisdom),
       const FestiveListScreen(),
       const StoriesOfIndiaScreen(),
       const AskTheGitaScreen(),
@@ -405,6 +436,9 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           GestureDetector(
             onTap: () async { // Changed to async
+            // 🔥 ADD THIS LINE HERE
+            // This globally clears any active keyboard/focus before navigating
+            FocusManager.instance.primaryFocus?.unfocus();
               await Navigator.push(
                 context,
                 PageRouteBuilder(
@@ -485,8 +519,9 @@ class _HomeScreenState extends State<HomeScreen> {
 // --- HOME TAB ---
 class _HomeTab extends StatefulWidget {
   final bool isLoading;
+  final Map<String, dynamic> initialWisdom; // <--- ADD THIS
 
-  const _HomeTab({required this.isLoading});
+  const _HomeTab({required this.isLoading, required this.initialWisdom});
 
   @override
   State<_HomeTab> createState() => _HomeTabState();
@@ -494,7 +529,7 @@ class _HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin{
   Map<String, dynamic>? _wisdomData;
-  bool _isWisdomLoading = true;
+  late bool _isWisdomLoading; // 1. Use 'late'
   bool _isSaved = false;
   StreamSubscription<DocumentSnapshot>? _wisdomSaveSubscription;
 
@@ -505,7 +540,18 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin{
   @override
   void initState() {
     super.initState();
-    _fetchDailyWisdom();
+    // 2. EXTREME PERFECTION: Check synchronously before any 'await'
+    if (widget.initialWisdom.isNotEmpty) {
+      _wisdomData = widget.initialWisdom;
+      _isSaved = widget.initialWisdom['isInitiallySaved'] ?? false;
+      _isWisdomLoading = false; // This prevents the loader from ever appearing
+      
+      // Still run this to set up your Firestore Bookmark listener
+      _fetchDailyWisdom(); 
+    } else {
+      _isWisdomLoading = true;
+      _fetchDailyWisdom();
+    }
   }
 
   @override
@@ -515,48 +561,30 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin{
   }
 
   Future<void> _fetchDailyWisdom() async {
-    // 1. Get the daily wisdom content
     final data = await WisdomService().getDailyWisdom();
-    if (!mounted) return;
+    if (!mounted || data.isEmpty) return;
 
-    // Cancel any previous subscription.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // 1. Setup the Real-time Listener
     await _wisdomSaveSubscription?.cancel();
+    
+    final docRef = _firestore
+        .collection('Users')
+        .doc(user.uid)
+        .collection('SavedShlokas')
+        .doc(data['Source']);
 
-    bool isSaved = false;
-    // 2. If wisdom was found, check its saved status and set up a listener
-    if (data.isNotEmpty) {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final docRef = _firestore
-            .collection('Users')
-            .doc(user.uid)
-            .collection('SavedShlokas')
-            .doc(data['Source']);
-
-        // Get initial state
-        final doc = await docRef.get();
-        if (!mounted) return;
-        isSaved = doc.exists;
-
-        // Listen for future changes
-        _wisdomSaveSubscription = docRef.snapshots().listen((snapshot) {
-          if (mounted && _isSaved != snapshot.exists) {
-            setState(() {
-              _isSaved = snapshot.exists;
-            });
-          }
+    _wisdomSaveSubscription = docRef.snapshots().listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          _isSaved = snapshot.exists;
+          _wisdomData = data;
+          _isWisdomLoading = false;
         });
       }
-    }
-
-    // 3. Update the UI in a single call to prevent flicker
-    if (mounted) {
-      setState(() {
-        _wisdomData = data;
-        _isSaved = isSaved;
-        _isWisdomLoading = false;
-      });
-    }
+    });
   }
 
   void _showError(String message) {

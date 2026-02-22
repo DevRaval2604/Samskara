@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'package:flutter/services.dart'; 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/festivalscript.dart'; // Import the script to populate the database
 import 'utils/storiesscript.dart'; // Import the script to populate the database
@@ -10,6 +11,14 @@ import 'widgets/common_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 1. Force Status Bar Icons to be visible
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent, // Makes it seamless
+    statusBarIconBrightness: Brightness.dark, // Dark icons (Clock/Battery) for light bg
+    statusBarBrightness: Brightness.light, // For iOS support
+    systemNavigationBarColor: backgroundColor, // Match your bottom bar
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
@@ -37,46 +46,64 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Media Query check for system theme [2026-02-09]
+    final isDarkMode = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Samskara UI',
       theme: ThemeData(
+        brightness: isDarkMode ? Brightness.dark : Brightness.light,
         fontFamily: 'Sans-Serif',
         primaryColor: primaryColor,
-        scaffoldBackgroundColor: backgroundColor, // <--- SET THIS
-        canvasColor: backgroundColor,             // <--- SET THIS
+        scaffoldBackgroundColor: backgroundColor,
+        canvasColor: backgroundColor,
         useMaterial3: true,
+        // This ensures the AppBar doesn't flip the icons back to white
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle.dark, 
+        ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryColor,
-          surface: backgroundColor,               // <--- SET THIS
+          surface: backgroundColor,
+          brightness: isDarkMode ? Brightness.dark : Brightness.light,
         ),
       ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          precacheImage(const AssetImage('assets/Splash.PNG'), context);
-          // While checking auth state, don't show a white screen
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: backgroundColor, // Ensure this is themed
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SamskaraLogo(),
-                    SizedBox(height: 20),
-                    CircularProgressIndicator(color: primaryColor),
-                  ],
+      // 2. Wrap the Home logic in an AnnotatedRegion
+      // This is the "Force Override" for the Status Bar
+      home: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark, // Android
+          statusBarBrightness: Brightness.light,    // iOS
+        ),
+        child: StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, snapshot) {
+            precacheImage(const AssetImage('assets/Splash.PNG'), context);
+            
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                backgroundColor: backgroundColor,
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SamskaraLogo(),
+                      SizedBox(height: 20),
+                      CircularProgressIndicator(color: primaryColor),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
-          if (snapshot.hasData) {
-            // PASS THE DATA HERE
-            return HomeScreen(initialWisdom: initialWisdom);
-          }
-          return const LoginScreen();
-        },
+              );
+            }
+
+            if (snapshot.hasData) {
+              return HomeScreen(initialWisdom: initialWisdom);
+            }
+            return const LoginScreen();
+          },
+        ),
       ),
     );
   }

@@ -74,11 +74,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void _validateAndLogin() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
-    // 1. Initialize the service
-    final wisdomService = WisdomService();
-
-    // 2. Fetch the data
-    final wisdomData = await wisdomService.getDailyWisdom();
 
     if (email.isEmpty) {
       _emailShakeKey.currentState?.shake();
@@ -128,6 +123,8 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
 
+        final wisdomData = await WisdomService().getDailyWisdom();
+
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -165,9 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _signInWithGoogle() async {
-    final wisdomService = WisdomService();
-    final wisdomData = await wisdomService.getDailyWisdom();
-
     setState(() => _isLoading = true);
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -205,6 +199,8 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
       }
+
+      final wisdomData = await WisdomService().getDailyWisdom();
 
       // On success, navigate to home screen.
       if (mounted) {
