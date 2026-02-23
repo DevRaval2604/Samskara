@@ -134,7 +134,15 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
 }
 
   bool _isAppropriate(String query) {
-    final forbidden = ['hate', 'violence', 'abuse', 'kill', 'suicide', 'illegal', 'sex'];
+    final forbidden = [
+    'hate', 'violence', 'abuse', 'kill', 'suicide', 'illegal', 'sex', 
+    'murder', 'terrorist', 'racist', 'porn', 'nude', 'blood', 'torture', 
+    'bomb', 'weapon', 'drugs', 'gamble', 'scam', 'hack', 'stolen',
+    'rape', 'molest', 'pedophile', 'hitler', 'nazi', 'holocaust', 
+    'stalin', 'incest', 'bestiality', 'explicit', 'heroin', 'cocaine', 
+    'meth', 'self-harm', 'cutting', 'overdose', 'propaganda', 
+    'election', 'extremist', 'slaughter', 'genocide', 'massacre'
+    ];
     return !forbidden.any((word) => query.toLowerCase().contains(word));
   }
 
@@ -199,7 +207,12 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
             Analyze the input.
             1. If the input appears to be gibberish, random keystrokes, or meaningless (e.g., "asdf", "sdhsh", "jkl"), reply gently asking the user to express their thought clearly.
             2. If the input is a greeting, a single word, or a short phrase with clear meaning (e.g., "hi", "sorry", "weird", "anger", "help"), reply warmly and wisely in plain text. Offer a brief thought or ask the user to elaborate. Do not use any tags.
-            3. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
+            3. FACTUAL/NON-SPIRITUAL QUESTIONS (e.g., "Who was Hitler?", "What AI model are you?", "How to cook?"):
+            - Reply directly and factually as a grounded Sage. 
+            - DO NOT provide a Gita [REFERENCE], [SHLOK], or [TRANSLATION] for these topics.
+            - Use plain text only to explain the historical or technical facts. 
+            - Keep the tone calm and wise, but do not force a spiritual connection to history or technology.
+            4. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
             [REFERENCE] Adhyaya X, Shloka Y
             [SHLOK] (The Sanskrit Verse)
             [TRANSLATION] (The English Translation)
@@ -372,7 +385,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
       contentWidgets.add(_buildInternalBlock("", _simpleResponse!, sw, sh, isJustified: true));
     } else if (_shlok != null) {
       if (_verseRef != null) {
-        contentWidgets.add(_buildInternalBlock("Gita Adhyay & Shloka", _verseRef!, sw, sh));
+        contentWidgets.add(_buildInternalBlock("Gita Adhyaya & Shloka", _verseRef!, sw, sh));
       }
       contentWidgets.add(_buildInternalBlock("Sacred Shloka", _shlok!, sw, sh, isSanskrit: true, isItalic: true));
       contentWidgets.add(_buildInternalBlock("Translation", _translation!, sw, sh));
