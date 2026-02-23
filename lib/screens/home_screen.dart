@@ -218,12 +218,15 @@ class WisdomService {
 
           STRICT FORMATTING RULES:
           1. [REFERENCE]: State the scripture name clearly first. 
-             - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shloka Y"
-             - For Arthashastra: "Arthashastra - Book X, Chapter Y"
-             - For Puranas: "[Name] Purana - Canto X, Chapter Y"
-             - For Vedas: "[Name] Veda - Mandala X, Sukta Y"
-             - For Upanishads: "[Name] Upanishad - Adhyay X, Valli Y"
-             - For Gita: "Bhagavad Gita - Adhyay X, Shloka Y"
+          - For Rig Veda: "Rig Veda - Mandala X, Sukta Y, Mantra Z"
+          - For Sama Veda: "Sama Veda - Archika X, Prapathaka Y, Verse Z"
+          - For Yajur Veda: "Yajur Veda - Adhyaya X, Mantra Y"
+          - For Atharva Veda: "Atharva Veda - Kanda X, Sukta Y, Mantra Z"
+          - For Upanishads: "[Name] Upanishad - Adhyaya X, Valli Y, Shloka Z"
+          - For Bhagavad Gita: "Bhagavad Gita - Adhyaya X, Shloka Y"
+          - For Mahapuranas/Upapuranas: "[Name] Purana - Canto X, Chapter Y, Shloka Z"
+          - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shloka Y"
+          - For Arthashastra: "Arthashastra - Book X, Chapter Y, Shloka Z"
           2. [SHLOK]: The Sanskrit Verse.
           3. [TRANSLATION]: The English Translation.
           4. [PRACTICAL]: Practical, simple modern-day guidance.
