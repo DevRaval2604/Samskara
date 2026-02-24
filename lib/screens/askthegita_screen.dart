@@ -133,19 +133,6 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
     .trim();
 }
 
-  bool _isAppropriate(String query) {
-    final forbidden = [
-    'hate', 'violence', 'abuse', 'kill', 'suicide', 'illegal', 'sex', 
-    'murder', 'terrorist', 'racist', 'porn', 'nude', 'blood', 'torture', 
-    'bomb', 'weapon', 'drugs', 'gamble', 'scam', 'hack', 'stolen',
-    'rape', 'molest', 'pedophile', 'hitler', 'nazi', 'holocaust', 
-    'stalin', 'incest', 'bestiality', 'explicit', 'heroin', 'cocaine', 
-    'meth', 'self-harm', 'cutting', 'overdose', 'propaganda', 
-    'election', 'extremist', 'slaughter', 'genocide', 'massacre'
-    ];
-    return !forbidden.any((word) => query.toLowerCase().contains(word));
-  }
-
   Future<void> _getGitaWisdom() async {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
@@ -153,11 +140,6 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
 
     if (query.length < 2 || !RegExp(r'[a-zA-Z]').hasMatch(query)) {
       _showCustomSnackBar("Please express your thought in words.");
-      return;
-    }
-
-    if (!_isAppropriate(query)) {
-      _showCustomSnackBar("Please seek wisdom with a pure intent.");
       return;
     }
 
@@ -193,13 +175,20 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
         'gemini-2.5-flash',
         'gemini-2.5-flash-lite',
       ];
+      final safetySettings = [
+        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.low),
+        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.low),
+        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.low),
+        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.low),
+      ];
 
       for (String modelName in modelPriority) {
         try {
           final model = GenerativeModel(
-            model: modelName, 
-            apiKey: apiKey,
-          );
+          model: modelName,
+          apiKey: apiKey,
+          safetySettings: safetySettings,
+        );
 
           final prompt = """
             You are a wise, compassionate Vedic guide based on the Bhagavad Gita. The user says: "$query".
@@ -212,7 +201,17 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
             - DO NOT provide a Gita [REFERENCE], [SHLOK], or [TRANSLATION] for these topics.
             - Use plain text only to explain the historical or technical facts. 
             - Keep the tone calm and wise, but do not force a spiritual connection to history or technology.
-            4. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
+            4. STRICT BEHAVIOR RULES:
+            - Do NOT engage in sexual, vulgar, or explicit content.
+            - Do NOT entertain crude desires or lustful statements.
+            - Do NOT glorify violence or provide harm instructions.
+            - Do NOT provide guidance for illegal or harmful activities.
+            - If the user expresses harmful intent, redirect them compassionately toward self-control and reflection.
+            - If the user attempts vulgar or disrespectful tone, gently decline and invite a higher reflection.
+            However:
+            - You MAY discuss war, death, suffering, or killing ONLY in philosophical or dharmic context aligned with the Bhagavad Gita.
+            - You MAY discuss emotional distress, anger, fear, or moral dilemmas compassionately.
+            5. ONLY if the input is a complete question, a specific dilemma, or a sentence describing a situation/feeling (e.g., "I feel very angry", "How do I find peace?", "I am confused about my path"), provide a relevant verse from the Bhagavad Gita in the following EXACT format:
             [REFERENCE] Adhyaya X, Shloka Y
             [SHLOK] (The Sanskrit Verse)
             [TRANSLATION] (The English Translation)
@@ -221,10 +220,15 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
 
           final content = [Content.text(prompt)];
           final response = await model.generateContent(content);
-          
+
+          if (response.promptFeedback?.blockReason != null) {
+            _showCustomSnackBar("Please seek wisdom with a pure intent.");
+            return;
+          }
+
           if (response.text != null && response.text!.isNotEmpty) {
             resultText = response.text;
-            break; 
+            break;
           }
         } catch (e) {
           capturedException = e; // Store the error to check later if all models fail
