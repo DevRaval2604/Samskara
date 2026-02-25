@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utils/get_initials.dart';
+import 'get_initials.dart';
 import '../widgets/common_widgets.dart';
 
 class InitialsAvatar extends StatelessWidget {
