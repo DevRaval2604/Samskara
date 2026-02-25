@@ -11,7 +11,7 @@ import 'storiesofindia_screen.dart';
 import 'askthegita_screen.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
-import 'initials_avatar.dart';
+import '../utils/initials_avatar.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
