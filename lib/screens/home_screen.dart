@@ -218,20 +218,22 @@ class WisdomService {
 
           STRICT FORMATTING RULES:
           1. [REFERENCE]: State the scripture name clearly first. 
-          - For Rig Veda: "Rig Veda - Mandala X, Sukta Y, Mantra Z"
-          - For Sama Veda: "Sama Veda - Archika X, Prapathaka Y, Verse Z"
-          - For Yajur Veda: "Yajur Veda - Adhyaya X, Mantra Y"
-          - For Atharva Veda: "Atharva Veda - Kanda X, Sukta Y, Mantra Z"
-          - For Upanishads: "[Name] Upanishad - Adhyaya X, Valli Y, Shloka Z"
-          - For Bhagavad Gita: "Bhagavad Gita - Adhyaya X, Shloka Y"
-          - For Mahapuranas/Upapuranas: "[Name] Purana - Canto X, Chapter Y, Shloka Z"
-          - For Chanakya Neeti: "Chanakya Neeti - Chapter X, Shloka Y"
-          - For Arthashastra: "Arthashastra - Book X, Chapter Y, Shloka Z"
+          - REPLACE all placeholders with the ACTUAL specific numbers from the text.
+          - For Rig Veda: "Rig Veda - Mandala [Number], Sukta [Number], Mantra [Number]"
+          - For Sama Veda: "Sama Veda - Archika [Number], Prapathaka [Number], Verse [Number]"
+          - For Yajur Veda: "Yajur Veda - Adhyaya [Number], Mantra [Number]"
+          - For Atharva Veda: "Atharva Veda - Kanda [Number], Sukta [Number], Mantra [Number]"
+          - For Upanishads: "[Name] Upanishad - Adhyaya [Number], Valli [Number], Shloka [Number]"
+          - For Bhagavad Gita: "Bhagavad Gita - Adhyaya [Number], Shloka [Number]"
+          - For Mahapuranas: "[Name] Purana - Canto [Number], Chapter [Number], Shloka [Number]"
+          - For Chanakya Neeti: "Chanakya Neeti - Chapter [Number], Shloka [Number]"
+          - For Arthashastra: "Arthashastra - Book [Number], Chapter [Number], Shloka [Number]"
           2. [SHLOK]: The Sanskrit Verse.
           3. [TRANSLATION]: The English Translation.
           4. [PRACTICAL]: Practical, simple modern-day guidance.
 
           STRICT RULE: Do not use Markdown (no asterisks, no bolding). Return plain text only.
+          STRICT RULE: Do not return the literal text "[Number]". Use actual digits.
           """;
 
         final response = await model.generateContent([Content.text(prompt)]);
@@ -239,6 +241,11 @@ class WisdomService {
 
         if (text != null && text.contains('[SHLOK]')) {
           final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          // ✅ DIGIT ENFORCEMENT (Prevents "Adhyaya Ten" issue)
+          if (!RegExp(r'\d').hasMatch(source)) {
+            debugPrint("No numeric digits found in reference. Retrying...");
+            continue; 
+          }
 
           // After extracting the 'source' from Gemini...
           final savedCheck = await _db.collection('Users').doc(uid)
@@ -311,19 +318,21 @@ class WisdomService {
     return {};
   }
 
-  // --- YOUR ORIGINAL SURGICAL EXTRACTION METHODS (UNCHANGED) ---
+  /// --- THE WATERPROOF EXTRACTION ENGINE ---
 
   String _extractSection(String text, String startTag, String? endTag) {
     try {
-      int start = text.indexOf(startTag);
+      // Logic: Search from the END of the string to avoid prompt-echo "glitches"
+      int start = text.lastIndexOf(startTag); 
       if (start == -1) return "";
       start += startTag.length;
-      int end = (endTag != null) ? text.indexOf(endTag) : text.length;
+      
+      int end = (endTag != null) ? text.indexOf(endTag, start) : text.length;
       if (end == -1 || end < start) end = text.length;
+      
       String content = text.substring(start, end).trim();
-      if (content.startsWith(':')) {
-        content = content.substring(1).trim();
-      }
+      if (content.startsWith(':')) content = content.substring(1).trim();
+      
       return _sanitizeGeminiOutput(content);
     } catch (e) {
       return "";
@@ -332,6 +341,18 @@ class WisdomService {
 
   String _sanitizeGeminiOutput(String rawText) {
     return rawText
+    // 1. THE NUCLEAR STRIKE: 
+    // This regex catches the literal instructions if they leak into the output.
+      .replaceAll(RegExp(
+      r'Mandala X|Sukta Y|Mantra Z|' // Vedas
+      r'Archika X|Prapathaka Y|Verse Z|' // Sama Veda
+      r'Adhyaya X|Mantra Y|Shloka Z|' // Yajur/Gita
+      r'Kanda X|' // Atharva
+      r'Valli Y|' // Upanishads
+      r'Canto X|Chapter Y|' // Puranas/Neeti
+      r'Book X|' // Arthashastra
+      r'\[Number\]|\[Name\]', // General placeholders
+      caseSensitive: false), '')
       .replaceAll(RegExp(r'[#\*_`~]+'), ' ') 
       .replaceAll(RegExp(r'^\s*([\*\-\+]|\d+\.)\s+', multiLine: true), ' ')
       .replaceAll(RegExp(r'^["\u201C]|["\u201D]$'), '')

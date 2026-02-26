@@ -146,7 +146,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
         centerTitle: true,
         surfaceTintColor: Colors.transparent, // <--- THIS ensures no tint is applied
-        iconTheme: IconThemeData(color: primaryColor),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: primaryColor),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('Users').doc(user.uid).snapshots(),
