@@ -31,7 +31,7 @@ void main() async {
   // 1. Fetch data before the app starts
   final wisdomService = WisdomService();
   final initialWisdom = await wisdomService.getDailyWisdom();
-
+  Future.microtask(() => wisdomService.preGenerateTomorrowsWisdom());
   // 2. Pass it to MyApp
   runApp(MyApp(initialWisdom: initialWisdom));
 }

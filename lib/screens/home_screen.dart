@@ -44,6 +44,53 @@ class WisdomService {
     }
   }
 
+  // --- STEP 0: PRE-GENERATED CACHE CHECK ---
+final preKey = 'cached_wisdom_pre_${user.uid}_$today';
+final preGenerated = prefs.getString(preKey);
+if (preGenerated != null) {
+  await prefs.remove(preKey);
+  final data = Map<String, dynamic>.from(jsonDecode(preGenerated));
+  final source = data['Source'] as String;
+
+  // Check if already in pool (safety check)
+  final existingDoc = await _db.collection('WisdomPool')
+      .where('Source', isEqualTo: source)
+      .limit(1)
+      .get();
+
+  if (existingDoc.docs.isEmpty) {
+    // Officially write to WisdomPool now with proper Firestore types
+    final now = DateTime.now();
+    final expiryDate = now.add(const Duration(days: 730));
+    final Map<String, dynamic> poolData = {
+      'Source': source,
+      'Shloka': data['Shloka'],
+      'Meaning': data['Meaning'],
+      'Explanation': data['Explanation'],
+      'Date': today,
+      'CreatedAt': FieldValue.serverTimestamp(),
+      'DeleteAt': Timestamp.fromDate(expiryDate),
+    };
+    await _db.collection('WisdomPool').doc(source).set(poolData);
+
+    // Clean local data for cache
+    data['CreatedAt'] = now.toIso8601String();
+    data['DeleteAt'] = expiryDate.toIso8601String();
+  } else {
+    // Already in pool — use existing data
+    final existingData = existingDoc.docs.first.data();
+    if (existingData['CreatedAt'] is Timestamp) {
+      data['CreatedAt'] = (existingData['CreatedAt'] as Timestamp).toDate().toIso8601String();
+    }
+    if (existingData['DeleteAt'] is Timestamp) {
+      data['DeleteAt'] = (existingData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+    }
+  }
+
+  // Finalize — update SeenWisdom, LastWisdomSource, LastWisdomDate
+  return await _finalizeAndCache(user.uid, source, data, today, prefs);
+}
+  
   // --- STEP 1: LOCAL CACHE CHECK ---
   // Now we check cache using our "verified" today string
   String? cachedShloka = prefs.getString('cached_wisdom_data_${user.uid}');
@@ -140,14 +187,276 @@ class WisdomService {
   }
 
   // --- STEP 4: GENERATION ---
-  return await _generateNewWisdom(user.uid, today, prefs, seenIds);
+  return await _generateNewWisdom(user.uid, today, prefs, seenIds) ?? {};
 }
+
+Future<void> preGenerateTomorrowsWisdom() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final prefs = await SharedPreferences.getInstance();
+  final tomorrow = DateTime.now()
+      .add(const Duration(days: 1))
+      .toIso8601String()
+      .split('T')[0];
+
+  // Already pre-generated? Do nothing.
+  final existingCache = prefs.getString('cached_wisdom_pre_${user.uid}_$tomorrow');
+  if (existingCache != null) return;
+
+  try {
+    final userDoc = await _db.collection('Users').doc(user.uid).get();
+    final userData = userDoc.data();
+    List<dynamic> seenIds = userData?['SeenWisdom'] ?? [];
+    if (seenIds.length >= 365) seenIds = [];
+
+    // Check pool first — no AI needed if pool has entries
+    final poolSnapshot = await _db.collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(150)
+        .get();
+
+    final unseenDocs = poolSnapshot.docs.where((doc) {
+      final data = doc.data();
+      final Timestamp? deleteAt = data['DeleteAt'] as Timestamp?;
+      final bool isExpired = deleteAt != null &&
+          deleteAt.toDate().isBefore(DateTime.now());
+      return !seenIds.contains(data['Source']) && !isExpired;
+    }).toList();
+
+    Map<String, dynamic>? tomorrowData;
+
+    if (unseenDocs.isNotEmpty) {
+      unseenDocs.shuffle();
+      final data = unseenDocs.first.data();
+      final localData = Map<String, dynamic>.from(data);
+      if (localData['CreatedAt'] is Timestamp) {
+        localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp)
+            .toDate().toIso8601String();
+      }
+      if (localData['DeleteAt'] is Timestamp) {
+        localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp)
+            .toDate().toIso8601String();
+      }
+      tomorrowData = localData;
+    } else {
+      final existingPool = await _db.collection('WisdomPool')
+      .orderBy('CreatedAt', descending: true)
+      .limit(50)
+      .get();
+      final List<String> exclusionList = existingPool.docs
+          .map((d) => d['Source'] as String).toList();
+      tomorrowData = await _generateTomorrowLocally(user.uid, tomorrow, prefs, seenIds, exclusionList: exclusionList);
+    }
+
+    if (tomorrowData != null) {
+      await prefs.setString(
+        'cached_wisdom_pre_${user.uid}_$tomorrow',
+        jsonEncode(tomorrowData),
+      );
+    }
+  } catch (e) {
+    debugPrint("Pre-generation failed silently: $e");
+  }
+}
+
+Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorrow, SharedPreferences prefs, List<dynamic> seenIds, {List<String>? exclusionList}) async {
+    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    
+    // 1. Get last 50 entries to tell Gemini what to avoid
+    final List<String> finalExclusionList = exclusionList ?? (await _db.collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(50)
+        .get()).docs.map((d) => d['Source'] as String).toList();
+
+    final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+      for (String modelName in modelPriority) {
+      try {
+        final model = GenerativeModel(model: modelName, apiKey: apiKey);
+        
+        final prompt = """
+          You are a Master Vedic Sage with access to the entire corpus of Indian Knowledge:
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda.
+          2. The 108 Upanishads (Including Mukhya Upanishads and all Mahaupanishads).
+          3. The Bhagavad Gita.
+          4. The 18 Mahapuranas and all Upapuranas.
+          5. Chanakya Neeti (The manual of social wisdom and ethics).
+          6. The Arthashastra (The science of statecraft and economics).
+
+          STRICT AVOIDANCE:
+          The following references have already been shown to the user. You MUST NOT repeat any of them under any circumstance:
+          $finalExclusionList
+
+          TODAY'S SOURCE SELECTION (SILENT — NEVER PRINT THIS):
+          Before selecting a verse, first silently choose which scripture to draw from today.
+          You have access to this entire corpus:
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Kandas, and Suktas.
+          2. The 108 Upanishads — including all Mukhya Upanishads and Mahaupanishads.
+          3. The Bhagavad Gita — all 18 Adhyayas.
+          4. The 18 Mahapuranas and all Upapuranas — including Bhagavata, Vishnu, Shiva, Skanda, and all others.
+          5. Chanakya Neeti — all chapters.
+          6. The Arthashastra — all books.
+
+          ROTATION MANDATE: You MUST actively rotate across these categories to ensure the user receives diverse wisdom over time — spiritual, philosophical, ethical, social, and leadership wisdom in turns. Do NOT default to the Bhagavad Gita or any single popular scripture repeatedly. Treat the entire corpus as equally valid and equally important. Actively choose lesser-known scriptures and verses that carry profound wisdom but are rarely surfaced. The more diverse and unexpected the selection, the better the user's experience.
+
+          SELECTION RULE: After silently choosing the scripture, proceed to the Internal Verse Selection Process below using that chosen scripture as the source for today.
+
+          INTERNAL VERSE SELECTION PROCESS (SILENT — NEVER PRINT ANY PART OF THIS):
+          Before writing a single word of your response, complete the following steps entirely in silence:
+
+          Stage 1: Identify 3 candidate verses from today's chosen scripture that are complete, meaningful, and uplifting as standalone wisdom.
+          Stage 2: For each candidate, answer these three questions internally:
+            Question A: Do I know the exact reference numbers for this verse with full certainty? (Yes / No)
+            Question B: Is this the complete verse with no missing lines — reproducible in full? (Yes / No)
+            Question C: Is this reference absent from the exclusion list above? (Yes / No)
+          A candidate PASSES only if all three answers are Yes.
+          Discard any candidate that fails even one question.
+          Stage 3: From passing candidates, select the one with the most universally inspiring and practical wisdom.
+          If zero candidates pass, choose a different scripture and repeat from Stage 1.
+          You MUST NOT write your response until exactly one candidate has passed all three questions.
+
+          Now write your response using EXACTLY the following format.
+          All four tags are mandatory. No tag may be empty. No tag may be skipped. No extra tags may be added.
+
+          [REFERENCE]
+
+          Rules for [REFERENCE]:
+          The only content after [REFERENCE] must be the reference itself — nothing else.
+          No sub-labels. No "Scripture:". No "Source:". No "Chapter:". No descriptors of any kind.
+          Use only Arabic numerals. Never use words or Roman numerals for numbers.
+          If a subdivision does not exist in the traditional structure of the source, omit it entirely. Never guess. Never use placeholders.
+          Use these exact formats and no others:
+            Rig Veda — Mandala [number], Sukta [number], Mantra [number]
+            Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
+            Yajur Veda — Adhyaya [number], Mantra [number]
+            Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
+            Upanishads — [Name] Upanishad, [Division] [number], Shloka [number]
+            Bhagavad Gita — Adhyaya [number], Shloka [number]
+            Mahapuranas — [Name] Purana, Skanda [number], Adhyaya [number], Shloka [number]
+            Chanakya Neeti — Chapter [number], Shloka [number]
+            Arthashastra — Book [number], Chapter [number], Verse [number]
+
+          [SHLOK]
+
+          Rules for [SHLOK]:
+          The only content after [SHLOK] must be the bare Sanskrit verse itself.
+          No sub-labels. No "Sanskrit Verse:". No "Original:". No "Verse:". No descriptors of any kind.
+          The verse must be complete and untruncated — every line, from beginning to end.
+          Never cut a verse mid-line. Never summarize or shorten it.
+          If a verse is too long to reproduce fully, it failed Question B in Stage 2 — discard it and select another.
+
+          [TRANSLATION]
+
+          Rules for [TRANSLATION]:
+          The only content after [TRANSLATION] must be the bare English translation itself.
+          No sub-labels. No "English Translation:". No "Meaning:". No "Translation:". No descriptors of any kind.
+          Do not wrap the translation in quotation marks.
+          The translation must be accurate, clear, and complete.
+
+          [PRACTICAL]
+
+          Rules for [PRACTICAL]:
+          Write the content as one continuous, flowing paragraph of pure modern-day guidance inspired by the verse.
+          No labels. No numbers. No headers. No "Firstly", "Secondly", "Finally". No structural markers of any kind.
+          Speak directly and practically — as if a wise sage is telling a modern person exactly how to apply this ancient wisdom in today's world.
+          Keep it grounded, simple, and actionable. No abstract philosophy. No vague spirituality.
+          The entire section must read as seamless, flowing wisdom — not a list, not a structured breakdown.
+
+          ABSOLUTE RULES — APPLY TO ALL OUTPUTS AT ALL TIMES:
+          NEVER print any part of the internal verse selection process or the source selection process.
+          NEVER print which scripture was chosen today.
+          NEVER repeat a reference from the exclusion list.
+          NEVER leave any tag empty, blank, or with placeholder text.
+          NEVER use the literal text "[number]" or "[Number]" — always use actual digits.
+          NEVER use Markdown anywhere — no asterisks, no bolding, no italics, no headers, no bullet dashes.
+          NEVER add sub-labels, descriptors, or headings inside any tag.
+          NEVER output a partial or truncated verse under any circumstance.
+          NEVER wrap the translation in quotation marks.
+          NEVER add extra tags beyond [REFERENCE], [SHLOK], [TRANSLATION], [PRACTICAL].
+          NEVER default repeatedly to the Bhagavad Gita or any single popular scripture.
+          ALWAYS prioritize diversity — rotate across the full corpus with every generation.
+          ALWAYS maintain a tone that is wise, warm, and universally accessible.
+          """;
+
+        final response = await model.generateContent([Content.text(prompt)]);
+        final text = response.text;
+
+        if (text != null && text.contains('[SHLOK]')) {
+          final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          // ✅ DIGIT ENFORCEMENT (Prevents "Adhyaya Ten" issue)
+          if (!RegExp(r'\d').hasMatch(source)) {
+            debugPrint("No numeric digits found in reference. Retrying...");
+            continue; 
+          }
+
+          // After extracting the 'source' from Gemini...
+          final savedCheck = await _db.collection('Users').doc(uid)
+              .collection('SavedShlokas').doc(source).get();
+
+          if (savedCheck.exists) {
+            debugPrint("User already has $source in their permanent Saved list. Retrying generation...");
+            continue; // This forces Gemini to try a different shloka
+          }
+
+          // 1. DUPLICATE CHECK: Ensure user hasn't seen this in the last year
+          if (seenIds.contains(source)) {
+            debugPrint("Duplicate generated ($source). Retrying...");
+            continue;
+          }
+
+          // 2. POOL CHECK: Ensure we don't create duplicate entries in the global pool
+          final existingDocs = await _db.collection('WisdomPool')
+              .where('Source', isEqualTo: source)
+              .limit(1)
+              .get();
+
+          if (existingDocs.docs.isNotEmpty) {
+            // Use existing pool data — no Firestore write needed
+            final data = existingDocs.docs.first.data();
+            
+            // Clean for local cache
+            final Map<String, dynamic> localData = Map<String, dynamic>.from(data);
+            if (localData['CreatedAt'] is Timestamp) {
+              localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp).toDate().toIso8601String();
+            }
+            if (localData['DeleteAt'] is Timestamp) {
+              localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp).toDate().toIso8601String();
+            }
+
+            return localData; // LOCAL ONLY — no _finalizeAndCache
+          }
+
+          final now = DateTime.now();
+          final expiryDate = now.add(const Duration(days: 730));
+
+          // LOCAL ONLY — no Firestore write, no _finalizeAndCache
+          final Map<String, dynamic> localData = {
+            'Source': source,
+            'Shloka': _extractSection(text, '[SHLOK]', '[TRANSLATION]'),
+            'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
+            'Explanation': _extractSection(text, '[PRACTICAL]', null),
+            'Date': tomorrow,
+            'CreatedAt': now.toIso8601String(),
+            'DeleteAt': expiryDate.toIso8601String(),
+          };
+
+          return localData;
+        }
+      } catch (e) {
+        debugPrint("Model $modelName failed: $e");
+      }
+      }
+    }
+    return null;
+  }
 
   void _performBackgroundCleanup(String verifiedToday) {
     Timestamp actualNow = Timestamp.now();
       _db.collection('WisdomPool')
       .where('DeleteAt', isLessThan: actualNow)
-      .limit(450) // Clean 20 at a time for high efficiency
+      .limit(450) // Clean 450 at a time for high efficiency
       .get()
       .then((snapshot) {
         if (snapshot.docs.isNotEmpty) {
@@ -182,15 +491,14 @@ class WisdomService {
     };
   }
 
-  Future<Map<String, dynamic>> _generateNewWisdom(String uid, String today, SharedPreferences prefs, List<dynamic> seenIds) async {
+  Future<Map<String, dynamic>?> _generateNewWisdom(String uid, String today, SharedPreferences prefs, List<dynamic> seenIds, {List<String>? exclusionList}) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     
     // 1. Get last 50 entries to tell Gemini what to avoid
-    final existingPool = await _db.collection('WisdomPool')
+    final List<String> finalExclusionList = exclusionList ?? (await _db.collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
         .limit(50)
-        .get();
-    final List<String> exclusionList = existingPool.docs.map((d) => d['Source'] as String).toList();
+        .get()).docs.map((d) => d['Source'] as String).toList();
 
     final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
@@ -201,7 +509,7 @@ class WisdomService {
         
         // --- YOUR ORIGINAL PROMPT LOGIC ---
         final prompt = """
-          You are a Master Vedic Sage with access to the entire corpus of Indian Knowledge: 
+          You are a Master Vedic Sage with access to the entire corpus of Indian Knowledge:
           1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda.
           2. The 108 Upanishads (Including Mukhya Upanishads and all Mahaupanishads).
           3. The Bhagavad Gita.
@@ -209,32 +517,99 @@ class WisdomService {
           5. Chanakya Neeti (The manual of social wisdom and ethics).
           6. The Arthashastra (The science of statecraft and economics).
 
-          TASK:
-          Generate one "Daily Wisdom" entry. You MUST rotate daily across these diverse sources so the user experiences spiritual, social, and leadership wisdom.
+          STRICT AVOIDANCE:
+          The following references have already been shown to the user. You MUST NOT repeat any of them under any circumstance:
+          $finalExclusionList
 
-          STRICT AVOIDANCE: Do not generate any shloka from these sources:
-          ${exclusionList.join(', ')}
-          ${seenIds.take(20).join(', ')}
+          TODAY'S SOURCE SELECTION (SILENT — NEVER PRINT THIS):
+          Before selecting a verse, first silently choose which scripture to draw from today.
+          You have access to this entire corpus:
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Kandas, and Suktas.
+          2. The 108 Upanishads — including all Mukhya Upanishads and Mahaupanishads.
+          3. The Bhagavad Gita — all 18 Adhyayas.
+          4. The 18 Mahapuranas and all Upapuranas — including Bhagavata, Vishnu, Shiva, Skanda, and all others.
+          5. Chanakya Neeti — all chapters.
+          6. The Arthashastra — all books.
 
-          STRICT FORMATTING RULES:
-          1. [REFERENCE]: State the scripture name clearly first. 
-          - REPLACE all placeholders with the ACTUAL specific numbers from the text.
-          - For Rig Veda: "Rig Veda - Mandala [Number], Sukta [Number], Mantra [Number]"
-          - For Sama Veda: "Sama Veda - Archika [Number], Prapathaka [Number], Verse [Number]"
-          - For Yajur Veda: "Yajur Veda - Adhyaya [Number], Mantra [Number]"
-          - For Atharva Veda: "Atharva Veda - Kanda [Number], Sukta [Number], Mantra [Number]"
-          - For Upanishads: "[Name] Upanishad - Adhyaya [Number], Valli [Number], Shloka [Number]"
-          - For Bhagavad Gita: "Bhagavad Gita - Adhyaya [Number], Shloka [Number]"
-          - For Mahapuranas: "[Name] Purana - Canto [Number], Chapter [Number], Shloka [Number]"
-          - For Chanakya Neeti: "Chanakya Neeti - Chapter [Number], Shloka [Number]"
-          - For Arthashastra: "Arthashastra - Book [Number], Chapter [Number], Shloka [Number]"
-          2. [SHLOK]: The Sanskrit Verse.
-          3. [TRANSLATION]: The English Translation.
-          4. [PRACTICAL]: Practical, simple modern-day guidance.
+          ROTATION MANDATE: You MUST actively rotate across these categories to ensure the user receives diverse wisdom over time — spiritual, philosophical, ethical, social, and leadership wisdom in turns. Do NOT default to the Bhagavad Gita or any single popular scripture repeatedly. Treat the entire corpus as equally valid and equally important. Actively choose lesser-known scriptures and verses that carry profound wisdom but are rarely surfaced. The more diverse and unexpected the selection, the better the user's experience.
 
-          STRICT RULE: If a specific subdivision (like Adhyaya, Valli, or Canto) does not exist in the traditional source, omit that part. Never guess or use placeholders. Example: If an Upanishad has no Valli, use '[Name] Upanishad - Shloka [Number]'.
-          STRICT RULE: Do not use Markdown (no asterisks, no bolding). Return plain text only.
-          STRICT RULE: Do not return the literal text "[Number]". Use actual digits.
+          SELECTION RULE: After silently choosing the scripture, proceed to the Internal Verse Selection Process below using that chosen scripture as the source for today.
+
+          INTERNAL VERSE SELECTION PROCESS (SILENT — NEVER PRINT ANY PART OF THIS):
+          Before writing a single word of your response, complete the following steps entirely in silence:
+
+          Stage 1: Identify 3 candidate verses from today's chosen scripture that are complete, meaningful, and uplifting as standalone wisdom.
+          Stage 2: For each candidate, answer these three questions internally:
+            Question A: Do I know the exact reference numbers for this verse with full certainty? (Yes / No)
+            Question B: Is this the complete verse with no missing lines — reproducible in full? (Yes / No)
+            Question C: Is this reference absent from the exclusion list above? (Yes / No)
+          A candidate PASSES only if all three answers are Yes.
+          Discard any candidate that fails even one question.
+          Stage 3: From passing candidates, select the one with the most universally inspiring and practical wisdom.
+          If zero candidates pass, choose a different scripture and repeat from Stage 1.
+          You MUST NOT write your response until exactly one candidate has passed all three questions.
+
+          Now write your response using EXACTLY the following format.
+          All four tags are mandatory. No tag may be empty. No tag may be skipped. No extra tags may be added.
+
+          [REFERENCE]
+
+          Rules for [REFERENCE]:
+          The only content after [REFERENCE] must be the reference itself — nothing else.
+          No sub-labels. No "Scripture:". No "Source:". No "Chapter:". No descriptors of any kind.
+          Use only Arabic numerals. Never use words or Roman numerals for numbers.
+          If a subdivision does not exist in the traditional structure of the source, omit it entirely. Never guess. Never use placeholders.
+          Use these exact formats and no others:
+            Rig Veda — Mandala [number], Sukta [number], Mantra [number]
+            Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
+            Yajur Veda — Adhyaya [number], Mantra [number]
+            Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
+            Upanishads — [Name] Upanishad, [Division] [number], Shloka [number]
+            Bhagavad Gita — Adhyaya [number], Shloka [number]
+            Mahapuranas — [Name] Purana, Skanda [number], Adhyaya [number], Shloka [number]
+            Chanakya Neeti — Chapter [number], Shloka [number]
+            Arthashastra — Book [number], Chapter [number], Verse [number]
+
+          [SHLOK]
+
+          Rules for [SHLOK]:
+          The only content after [SHLOK] must be the bare Sanskrit verse itself.
+          No sub-labels. No "Sanskrit Verse:". No "Original:". No "Verse:". No descriptors of any kind.
+          The verse must be complete and untruncated — every line, from beginning to end.
+          Never cut a verse mid-line. Never summarize or shorten it.
+          If a verse is too long to reproduce fully, it failed Question B in Stage 2 — discard it and select another.
+
+          [TRANSLATION]
+
+          Rules for [TRANSLATION]:
+          The only content after [TRANSLATION] must be the bare English translation itself.
+          No sub-labels. No "English Translation:". No "Meaning:". No "Translation:". No descriptors of any kind.
+          Do not wrap the translation in quotation marks.
+          The translation must be accurate, clear, and complete.
+
+          [PRACTICAL]
+
+          Rules for [PRACTICAL]:
+          Write the content as one continuous, flowing paragraph of pure modern-day guidance inspired by the verse.
+          No labels. No numbers. No headers. No "Firstly", "Secondly", "Finally". No structural markers of any kind.
+          Speak directly and practically — as if a wise sage is telling a modern person exactly how to apply this ancient wisdom in today's world.
+          Keep it grounded, simple, and actionable. No abstract philosophy. No vague spirituality.
+          The entire section must read as seamless, flowing wisdom — not a list, not a structured breakdown.
+
+          ABSOLUTE RULES — APPLY TO ALL OUTPUTS AT ALL TIMES:
+          NEVER print any part of the internal verse selection process or the source selection process.
+          NEVER print which scripture was chosen today.
+          NEVER repeat a reference from the exclusion list.
+          NEVER leave any tag empty, blank, or with placeholder text.
+          NEVER use the literal text "[number]" or "[Number]" — always use actual digits.
+          NEVER use Markdown anywhere — no asterisks, no bolding, no italics, no headers, no bullet dashes.
+          NEVER add sub-labels, descriptors, or headings inside any tag.
+          NEVER output a partial or truncated verse under any circumstance.
+          NEVER wrap the translation in quotation marks.
+          NEVER add extra tags beyond [REFERENCE], [SHLOK], [TRANSLATION], [PRACTICAL].
+          NEVER default repeatedly to the Bhagavad Gita or any single popular scripture.
+          ALWAYS prioritize diversity — rotate across the full corpus with every generation.
+          ALWAYS maintain a tone that is wise, warm, and universally accessible.
           """;
 
         final response = await model.generateContent([Content.text(prompt)]);
@@ -316,7 +691,7 @@ class WisdomService {
       }
       }
     }
-    return {};
+    return null;
   }
 
   /// --- THE WATERPROOF EXTRACTION ENGINE ---

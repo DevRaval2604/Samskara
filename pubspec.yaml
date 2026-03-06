@@ -32,18 +32,22 @@ flutter:
   assets:
     - assets/Logo.PNG
     - assets/Splash.PNG
+    - assets/Splash_android12.PNG
     - assets/google_logo.png
     - assets/IOSlogo.png
     - .env
 
 flutter_native_splash:
   color: "#F8F4E9"
-
   image: assets/Splash.PNG
   fullscreen: true
 
   ios: true
-  android: false
+  android: true
+
+  android_12:
+    image: assets/Splash_android12.PNG
+    icon_background_color: "#F8F4E9"
 
 flutter_launcher_icons:
   ios: true
@@ -52,4 +56,4 @@ flutter_launcher_icons:
   image_path_ios: assets/IOSlogo.png
   remove_alpha_ios: true
   adaptive_icon_background: "#F8F4E9"
-  adaptive_icon_foreground: assets/IOSlogo.png
+  adaptive_icon_foreground: assets/Logo.PNG
