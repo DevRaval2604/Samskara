@@ -11,6 +11,8 @@ import 'widgets/common_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // ADD THIS LINE
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // 1. Force Status Bar Icons to be visible
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent, // Makes it seamless
