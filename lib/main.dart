@@ -5,20 +5,18 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'utils/festivalscript.dart'; // Import the script to populate the database
-import 'utils/storiesscript.dart'; // Import the script to populate the database
+import 'utils/festivalscript.dart';
+import 'utils/storiesscript.dart';
 import 'widgets/common_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // ADD THIS LINE
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  // 1. Force Status Bar Icons to be visible
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent, // Makes it seamless
-    statusBarIconBrightness: Brightness.dark, // Dark icons (Clock/Battery) for light bg
-    statusBarBrightness: Brightness.light, // For iOS support
-    systemNavigationBarColor: backgroundColor, // Match your bottom bar
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: backgroundColor,
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
   try {
@@ -27,28 +25,49 @@ void main() async {
     debugPrint("Warning: .env file not found. Ensure it is in root and added to pubspec.yaml assets.");
   }
   await Firebase.initializeApp();
-  // Run the script once
   await populateEncylopeadicFestivals();
   await uploadStories();
-  // 1. Fetch data before the app starts
   final wisdomService = WisdomService();
   final initialWisdom = await wisdomService.getDailyWisdom();
   Future.microtask(() => wisdomService.preGenerateTomorrowsWisdom());
-  // 2. Pass it to MyApp
   runApp(MyApp(initialWisdom: initialWisdom));
 }
 
-// Define your colors here so they are accessible
 const Color primaryColor = Color(0xFF6B3C3A);
-const Color backgroundColor = Color(0xFFFDF5E6); // Replace with your exact cream color
+const Color backgroundColor = Color(0xFFF8F4E9);
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final Map<String, dynamic> initialWisdom;
   const MyApp({super.key, required this.initialWisdom});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      precacheImage(const AssetImage('assets/google_logo.png'), context);
+      precacheImage(const AssetImage('assets/Splash.PNG'), context);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 1. Media Query check for system theme [2026-02-09]
     final isDarkMode = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
     
     return MaterialApp(
@@ -61,7 +80,6 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: backgroundColor,
         canvasColor: backgroundColor,
         useMaterial3: true,
-        // This ensures the AppBar doesn't flip the icons back to white
         appBarTheme: const AppBarTheme(
           systemOverlayStyle: SystemUiOverlayStyle.dark, 
         ),
@@ -71,18 +89,17 @@ class MyApp extends StatelessWidget {
           brightness: isDarkMode ? Brightness.dark : Brightness.light,
         ),
       ),
-      // 2. Wrap the Home logic in an AnnotatedRegion
-      // This is the "Force Override" for the Status Bar
       home: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark, // Android
-          statusBarBrightness: Brightness.light,    // iOS
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
         ),
         child: StreamBuilder<User?>(
           stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
             precacheImage(const AssetImage('assets/Splash.PNG'), context);
+            precacheImage(const AssetImage('assets/google_logo.png'), context);
             
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -101,7 +118,7 @@ class MyApp extends StatelessWidget {
             }
 
             if (snapshot.hasData) {
-              return HomeScreen(initialWisdom: initialWisdom);
+              return HomeScreen(initialWisdom: widget.initialWisdom);
             }
             return const LoginScreen();
           },

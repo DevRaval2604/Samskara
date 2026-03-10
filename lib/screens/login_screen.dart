@@ -15,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     if (widget.postRegistrationMessage != null) {
-      // Show snackbar after the frame has been rendered
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showInfo(widget.postRegistrationMessage!);
       });
@@ -45,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide previous if any
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message, style: const TextStyle(color: primaryColor)),
       backgroundColor: backgroundColor,
@@ -59,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showInfo(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide previous if any
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message, style: const TextStyle(color: primaryColor)),
       backgroundColor: backgroundColor,
@@ -80,9 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError("Please enter your email address.");
       return;
     }
-    if (!RegExp(
-      r"^[\w\.\+\-]+@([\w-]+\.)+[a-zA-Z]{2,}$")
-      .hasMatch(email)) {
+    if (!RegExp(r"^[\w\.\+\-]+@([\w-]+\.)+[a-zA-Z]{2,}$").hasMatch(email)) {
       _emailShakeKey.currentState?.shake();
       _showError("Please enter a valid email address.");
       return;
@@ -112,10 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final refreshedUser = FirebaseAuth.instance.currentUser;
 
         if (refreshedUser != null) {
-          // Check if they have Google linked
-          bool isGoogleUser = refreshedUser.providerData.any((p) => p.providerId == 'google.com');
+          bool isGoogleUser = refreshedUser.providerData
+              .any((p) => p.providerId == 'google.com');
 
-          // EDGE CASE FIX: Only block if NOT verified AND NOT a Google user
           if (!refreshedUser.emailVerified && !isGoogleUser) {
             _showError("Please verify your email to login.");
             await FirebaseAuth.instance.signOut();
@@ -134,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
               return FadeTransition(
                 opacity: CurvedAnimation(
                   parent: animation,
-                  curve: Curves.easeOut, // Starts fast to feel responsive
+                  curve: Curves.easeOut,
                 ),
                 child: child,
               );
@@ -155,24 +151,17 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       _showError("An unexpected error occurred: ${e.toString()}");
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return; // User cancelled
-      }
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -191,7 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
             'Email': user.email ?? '',
           });
         } catch (e) {
-          // If saving user details fails, sign them out to avoid an inconsistent state.
           await _googleSignIn.signOut();
           await FirebaseAuth.instance.signOut();
           _showError("Failed to save user details. Please try again.");
@@ -212,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
               return FadeTransition(
                 opacity: CurvedAnimation(
                   parent: animation,
-                  curve: Curves.easeOut, // Starts fast to feel responsive
+                  curve: Curves.easeOut,
                 ),
                 child: child,
               );
@@ -221,22 +209,26 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      // This will catch errors from GoogleSignIn().signIn() or signInWithCredential()
+      if (e is GoogleSignInException && 
+          e.code == GoogleSignInExceptionCode.canceled) {
+        return; // User cancelled — silent
+      }
       _showError("Google Sign-In failed. Please try again.");
-    } finally {
+    }finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<bool> _emailExists(String email) async {
-  final snapshot = await FirebaseFirestore.instance
-      .collection('Users')
-      .where('Email', isEqualTo: email)
-      .limit(1)
-      .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('Email', isEqualTo: email)
+        .limit(1)
+        .get();
 
-  return snapshot.docs.isNotEmpty;
-}
+    return snapshot.docs.isNotEmpty;
+  }
+
   void _passwordReset() async {
     String email = _emailController.text.trim();
 
@@ -271,15 +263,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       _showError("An unexpected error occurred: ${e.toString()}");
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. Get Screen Height & Width
     final size = MediaQuery.sizeOf(context);
     final double screenHeight = size.height;
     final double screenWidth = size.width;
@@ -289,22 +278,18 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Stack(
         children: [
           Center(
-            // 2. Scrollable to prevent overflow on tiny screens
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Center(
-                // 3. ConstrainedBox ensures the app doesn't stretch ugly on Tablets/Web
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 450),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Dynamic Top Spacing
                       SizedBox(height: screenHeight * 0.05),
 
                       const SamskaraLogo(),
 
-                      // Dynamic Spacing (3% of screen height)
                       SizedBox(height: screenHeight * 0.03),
 
                       ShakeWidget(
@@ -333,7 +318,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.01),
-                      PrimaryButton(text: "Login", onPressed: _validateAndLogin),
+                      PrimaryButton(
+                          text: "Login", onPressed: _validateAndLogin),
                       SizedBox(height: screenHeight * 0.03),
 
                       Row(children: [
@@ -350,7 +336,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: screenHeight * 0.03),
 
-                      // Responsive Google Button
                       SizedBox(
                         width: double.infinity,
                         height: screenHeight * 0.07,
@@ -371,7 +356,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               SizedBox(width: screenWidth * 0.02),
                               Text("Continue with Google",
                                   style: TextStyle(
-                                      color: primaryColor, fontSize: screenWidth * 0.04)),
+                                      color: primaryColor,
+                                      fontSize: screenWidth * 0.04)),
                             ],
                           ),
                         ),
@@ -391,13 +377,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Navigator.pushReplacement(
                                   context,
                                   PageRouteBuilder(
-                                    transitionDuration: const Duration(milliseconds: 200),
-                                    // For a replacement switch, we don't need a reverse duration 
-                                    // because the old screen is being destroyed immediately.
-                                    pageBuilder: (context, animation, secondaryAnimation) => const RegisterScreen(),
-                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                    transitionDuration:
+                                        const Duration(milliseconds: 200),
+                                    pageBuilder: (context, animation,
+                                            secondaryAnimation) =>
+                                        const RegisterScreen(),
+                                    transitionsBuilder: (context, animation,
+                                        secondaryAnimation, child) {
                                       return FadeTransition(
-                                        // Use easeOut for a 'quick start' feel on the new screen
                                         opacity: CurvedAnimation(
                                           parent: animation,
                                           curve: Curves.easeOut,
@@ -419,7 +406,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ]),
 
-                      // Bottom safety padding
                       SizedBox(height: screenHeight * 0.05),
                     ],
                   ),

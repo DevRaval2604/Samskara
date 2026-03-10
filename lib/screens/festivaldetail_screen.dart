@@ -95,7 +95,7 @@ class _FestivalDetailScreenState extends State<FestivalDetailScreen> {
           final festivalName = widget.data['Name'] ?? 'this festival';
           final prompt = "In exactly 3 sentences, explain the modern relevance of $festivalName and why it still matters in today's world. Write in plain prose, no markdown, no bullet points, warm and direct tone.";
           final content = [Content.text(prompt)];
-          final response = await model.generateContent(content);
+          final response = await model.generateContent(content).timeout(const Duration(seconds: 10));
           
           if (response.text != null && response.text!.isNotEmpty) {
             // APPLY THE FOOLPROOF SANITIZER HERE

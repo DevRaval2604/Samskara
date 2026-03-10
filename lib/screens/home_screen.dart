@@ -242,7 +242,7 @@ Future<void> preGenerateTomorrowsWisdom() async {
     } else {
       final existingPool = await _db.collection('WisdomPool')
       .orderBy('CreatedAt', descending: true)
-      .limit(50)
+      .limit(365)
       .get();
       final List<String> exclusionList = existingPool.docs
           .map((d) => d['Source'] as String).toList();
@@ -266,7 +266,7 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
     // 1. Get last 50 entries to tell Gemini what to avoid
     final List<String> finalExclusionList = exclusionList ?? (await _db.collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
-        .limit(50)
+        .limit(365)
         .get()).docs.map((d) => d['Source'] as String).toList();
 
     final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
@@ -391,17 +391,21 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             continue; 
           }
 
-          // After extracting the 'source' from Gemini...
-          final savedCheck = await _db.collection('Users').doc(uid)
-              .collection('SavedShlokas').doc(source).get();
+          if (finalExclusionList.map(_normalizeSource).contains(_normalizeSource(source))) {
+            debugPrint("In exclusion list. Retrying...");
+            continue;
+          }
 
-          if (savedCheck.exists) {
+          // After extracting the 'source' from Gemini...
+          final savedSnapshot = await _db.collection('Users').doc(uid)
+              .collection('SavedShlokas').get();
+          if (savedSnapshot.docs.any((doc) => _normalizeSource(doc.id) == _normalizeSource(source))) {
             debugPrint("User already has $source in their permanent Saved list. Retrying generation...");
             continue; // This forces Gemini to try a different shloka
           }
 
           // 1. DUPLICATE CHECK: Ensure user hasn't seen this in the last year
-          if (seenIds.contains(source)) {
+          if (seenIds.map((id) => _normalizeSource(id.toString())).contains(_normalizeSource(source))) {
             debugPrint("Duplicate generated ($source). Retrying...");
             continue;
           }
@@ -426,6 +430,15 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             }
 
             return localData; // LOCAL ONLY — no _finalizeAndCache
+          }
+
+          final allRecent = await _db.collection('WisdomPool')
+              .orderBy('CreatedAt', descending: true)
+              .limit(150)
+              .get();
+          if (allRecent.docs.any((doc) => 
+              _normalizeSource(doc['Source']) == _normalizeSource(source))) {
+            continue;
           }
 
           final now = DateTime.now();
@@ -491,13 +504,103 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
     };
   }
 
+  String _normalizeSource(String source) {
+    final scriptureKey = _extractScriptureKey(source);
+    final numbers = RegExp(r'\d+').allMatches(source)
+        .map((m) => m.group(0)!)
+        .join('_');
+    return '${scriptureKey}_$numbers';
+  }
+
+  String _extractScriptureKey(String source) {
+    final s = source.toLowerCase()
+        .replaceAll(RegExp(r'[,\.\-—–:;]+'), ' ')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
+
+    // 1. RIG VEDA
+    if (s.contains('rig veda') || s.contains('rigveda') || s.contains('ṛgveda')) return 'rigveda';
+    
+    // 2. SAMA VEDA
+    if (s.contains('sama veda') || s.contains('samaveda') || s.contains('sāmaveda')) return 'samaveda';
+    
+    // 3. YAJUR VEDA
+    if (s.contains('yajur veda') || s.contains('yajurveda') || s.contains('yajur')) return 'yajurveda';
+    
+    // 4. ATHARVA VEDA
+    if (s.contains('atharva veda') || s.contains('atharvaveda') || s.contains('atharva')) return 'atharvaveda';
+
+    // 5. BHAGAVAD GITA (before generic 'gita' check)
+    if (s.contains('bhagavad gita') || s.contains('bhagavadgita') || 
+        s.contains('bhagwad gita') || s.contains('gita')) {
+      return 'gita';
+    }
+
+    // 6. CHANAKYA NEETI
+    if (s.contains('chanakya') || s.contains('chankya') || s.contains('chanakyaniti')) return 'chanakya';
+
+    // 7. ARTHASHASTRA
+    if (s.contains('arthashastra') || s.contains('artha shastra') || 
+        s.contains('arthshastra') || s.contains('arthasastra')) {
+      return 'arthashastra';
+    }
+
+    // 8. UPANISHADS — extract name before 'upanishad'
+    if (s.contains('upanishad') || s.contains('upanisad') || 
+        s.contains('upnishad') || s.contains('upanishat')) {
+      final match = RegExp(r'(\w+)\s+upanisha?[dt]?', caseSensitive: false).firstMatch(s);
+      String name = match?.group(1) ?? 'unknown';
+      // Normalize Sanskrit transliteration variants
+      name = name
+          .replaceAll(RegExp(r'sh'), 's')
+          .replaceAll(RegExp(r'aa'), 'a')
+          .replaceAll(RegExp(r'ii'), 'i')
+          .replaceAll(RegExp(r'uu'), 'u')
+          .replaceAll(RegExp(r'th'), 't')
+          .replaceAll(RegExp(r'ph'), 'p')
+          .replaceAll('v', 'w')
+          .replaceAll('ā', 'a')
+          .replaceAll('ī', 'i')
+          .replaceAll('ū', 'u')
+          .replaceAll('ṛ', 'r')
+          .replaceAll('ṭ', 't')
+          .replaceAll('ḍ', 'd')
+          .replaceAll('ṇ', 'n')
+          .replaceAll('ṅ', 'n')
+          .replaceAll('ñ', 'n')
+          .replaceAll('ś', 's')
+          .replaceAll('ṣ', 's');
+      return 'upanishad_$name';
+    }
+
+    // 9. PURANAS — extract name before 'purana'
+    if (s.contains('purana') || s.contains('puranam') || 
+        s.contains('puraan') || s.contains('puran')) {
+      final match = RegExp(r'(\w+)\s+purana?m?', caseSensitive: false).firstMatch(s);
+      String name = match?.group(1) ?? 'unknown';
+      name = name
+          .replaceAll('ā', 'a')
+          .replaceAll('ī', 'i')
+          .replaceAll('ū', 'u')
+          .replaceAll('ṛ', 'r')
+          .replaceAll('ś', 's')
+          .replaceAll('ṣ', 's')
+          .replaceAll('ṇ', 'n');
+      return 'purana_$name';
+    }
+
+    // 10. FALLBACK — first two meaningful words
+    final words = s.split(' ').where((w) => w.length > 2).take(2).join('_');
+    return words.isEmpty ? 'unknown' : words;
+  }
+
   Future<Map<String, dynamic>?> _generateNewWisdom(String uid, String today, SharedPreferences prefs, List<dynamic> seenIds, {List<String>? exclusionList}) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     
     // 1. Get last 50 entries to tell Gemini what to avoid
     final List<String> finalExclusionList = exclusionList ?? (await _db.collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
-        .limit(50)
+        .limit(365)
         .get()).docs.map((d) => d['Source'] as String).toList();
 
     final List<String> modelPriority = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
@@ -623,17 +726,21 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             continue; 
           }
 
-          // After extracting the 'source' from Gemini...
-          final savedCheck = await _db.collection('Users').doc(uid)
-              .collection('SavedShlokas').doc(source).get();
+          if (finalExclusionList.map(_normalizeSource).contains(_normalizeSource(source))) {
+            debugPrint("In exclusion list. Retrying...");
+            continue;
+          }
 
-          if (savedCheck.exists) {
+          // After extracting the 'source' from Gemini...
+          final savedSnapshot = await _db.collection('Users').doc(uid)
+              .collection('SavedShlokas').get();
+          if (savedSnapshot.docs.any((doc) => _normalizeSource(doc.id) == _normalizeSource(source))) {
             debugPrint("User already has $source in their permanent Saved list. Retrying generation...");
             continue; // This forces Gemini to try a different shloka
           }
 
           // 1. DUPLICATE CHECK: Ensure user hasn't seen this in the last year
-          if (seenIds.contains(source)) {
+          if (seenIds.map((id) => _normalizeSource(id.toString())).contains(_normalizeSource(source))) {
             debugPrint("Duplicate generated ($source). Retrying...");
             continue;
           }
@@ -658,6 +765,15 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             }
 
             return await _finalizeAndCache(uid, source, localData, today, prefs);
+          }
+
+          final allRecent = await _db.collection('WisdomPool')
+              .orderBy('CreatedAt', descending: true)
+              .limit(150)
+              .get();
+          if (allRecent.docs.any((doc) => 
+              _normalizeSource(doc['Source']) == _normalizeSource(source))) {
+            continue;
           }
 
           final now = DateTime.now();
@@ -980,8 +1096,10 @@ class _HomeTabState extends State<_HomeTab> with AutomaticKeepAliveClientMixin{
       if (mounted) {
         setState(() {
           _isSaved = snapshot.exists;
-          _wisdomData = data;
-          _isWisdomLoading = false;
+          if (_wisdomData == null || widget.initialWisdom.isEmpty) {
+            _wisdomData = data;
+            _isWisdomLoading = false;
+          }
         });
       }
     });

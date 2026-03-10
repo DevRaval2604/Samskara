@@ -22,24 +22,6 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
   void initState() {
     super.initState();
     _isSaved = widget.isInitiallySaved;
-    _checkSavedStatus();
-  }
-
-  // 1. Check if the story is already in the user's saved subcollection
-  Future<void> _checkSavedStatus() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    final doc = await _firestore
-        .collection('Users')
-        .doc(user.uid)
-        .collection('SavedStories')
-        .doc(widget.data['Title'])
-        .get();
-
-    if (mounted) {
-      setState(() => _isSaved = doc.exists);
-    }
   }
 
   // 2. Toggle logic: Adds or Removes the document

@@ -17,7 +17,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   // --- THEMED LOGOUT CONFIRMATION DIALOG ---
   Future<void> _showLogoutConfirmation(double sw) async {
@@ -56,8 +56,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(sw * 0.02)),
             ),
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              _signOut(); // Execute sign out
+              Navigator.pop(context);
+              _signOut();
             },
             child: Text(
               "Depart",
@@ -69,7 +69,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Responsive Edit Name Dialog
   Future<void> _editName(String currentName, double sw) async {
     TextEditingController nameController = TextEditingController(text: currentName);
     return showDialog(
@@ -108,25 +107,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final navigator = Navigator.of(context);
   try {
     // 1. Sign out 
-    await _auth.signOut();
     await _googleSignIn.signOut();
+    await _auth.signOut();
     
     if (!mounted) return;
 
-    // 2. Use a 0ms transition or a very fast 100ms fade
-    // This prevents the 'double animation' glitch
-    navigator.pushAndRemoveUntil(
-      PageRouteBuilder(
-        transitionDuration: Duration.zero, // Instant swap
-        reverseTransitionDuration: Duration.zero,
-        pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
-      ),
-      (Route<dynamic> route) => false,
-    );
-  } catch (e) {
-    debugPrint('Error: $e');
+      navigator.pushAndRemoveUntil(
+        PageRouteBuilder(
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+        ),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -141,11 +138,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text('Profile', style: TextStyle(color: primaryColor, fontSize: sw * 0.06, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent, // Keeps it transparent at rest
-        elevation: 0, 
-        scrolledUnderElevation: 0, // <--- THIS prevents the color change on scroll
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        surfaceTintColor: Colors.transparent, // <--- THIS ensures no tint is applied
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: primaryColor),
           onPressed: () => Navigator.pop(context),
@@ -176,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(initials, style: TextStyle(fontSize: sw * 0.09, fontWeight: FontWeight.bold, color: backgroundColor)),
                 ),
                 SizedBox(height: sh * 0.02),
-                
+
                 GestureDetector(
                   onTap: () => _editName(name, sw),
                   child: Row(
@@ -189,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 Text(email, style: TextStyle(color: primaryColor.withValues(alpha: 0.7), fontSize: sw * 0.04, fontFamily: 'Serif')),
-                
+
                 SizedBox(height: sh * 0.05),
 
                 Padding(
@@ -197,12 +194,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Row(
                     children: [
                       _buildGridItem(
-                        Icons.auto_stories_outlined, 
-                        "Saved Stories", 
-                        sw, 
-                        sh, 
+                        Icons.auto_stories_outlined,
+                        "Saved Stories",
+                        sw,
+                        sh,
                         () {
-                          // Navigating to SavedStoriesScreen with your 200ms EaseOut animation
                           Navigator.push(
                             context,
                             PageRouteBuilder(
@@ -210,17 +206,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               reverseTransitionDuration: const Duration(milliseconds: 200),
                               pageBuilder: (context, animation, secondaryAnimation) => const SavedStoriesScreen(),
                               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                // The 'easeOut' curve makes the 200ms feel snappy and premium
                                 final curvedAnimation = CurvedAnimation(
                                   parent: animation,
-                                  curve: Curves.easeOut,         
-                                  reverseCurve: Curves.easeIn,   
+                                  curve: Curves.easeOut,
+                                  reverseCurve: Curves.easeIn,
                                 );
-
-                                return FadeTransition(
-                                  opacity: curvedAnimation,
-                                  child: child,
-                                );
+                                return FadeTransition(opacity: curvedAnimation, child: child);
                               },
                             ),
                           );
@@ -228,37 +219,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       SizedBox(width: sw * 0.04),
                       _buildGridItem(Icons.history_edu_outlined, "Saved Shlokas", sw, sh, () {
-                        // Navigating to SavedStoriesScreen with your 200ms EaseOut animation
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              transitionDuration: const Duration(milliseconds: 200),
-                              reverseTransitionDuration: const Duration(milliseconds: 200),
-                              pageBuilder: (context, animation, secondaryAnimation) => const SavedShlokasScreen(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                // The 'easeOut' curve makes the 200ms feel snappy and premium
-                                final curvedAnimation = CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOut,         
-                                  reverseCurve: Curves.easeIn,   
-                                );
-
-                                return FadeTransition(
-                                  opacity: curvedAnimation,
-                                  child: child,
-                                );
-                              },
-                            ),
-                          );
-                        }
-                      ),
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            transitionDuration: const Duration(milliseconds: 200),
+                            reverseTransitionDuration: const Duration(milliseconds: 200),
+                            pageBuilder: (context, animation, secondaryAnimation) => const SavedShlokasScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              final curvedAnimation = CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOut,
+                                reverseCurve: Curves.easeIn,
+                              );
+                              return FadeTransition(opacity: curvedAnimation, child: child);
+                            },
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
 
                 SizedBox(height: sh * 0.06),
 
-                // Updated Logout Button to trigger Confirmation
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: sw * 0.06),
                   child: InkWell(

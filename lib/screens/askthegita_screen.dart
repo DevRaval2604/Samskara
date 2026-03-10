@@ -182,15 +182,44 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
         SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.low),
       ];
 
+      final now = DateTime.now();
+      final days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      final months = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+      final yesterday = now.subtract(const Duration(days: 1));
+      final tomorrow = now.add(const Duration(days: 1));
+      final hour = now.hour;
+      final amPm = hour >= 12 ? 'PM' : 'AM';
+      final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      final offset = now.timeZoneOffset;
+      final offsetHours = offset.inHours;
+      final offsetStr = offsetHours >= 0 ? 'UTC+$offsetHours' : 'UTC$offsetHours';
+      final timezoneName = now.timeZoneName;
+
+      final currentDateTime = '''
+      Current Date & Time Information (use this if user asks anything about date, day, time, or related):
+      - Today: ${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}, ${now.year}
+      - Current Time: ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}
+      - Yesterday: ${days[yesterday.weekday - 1]}, ${months[yesterday.month - 1]} ${yesterday.day}, ${yesterday.year}
+      - Tomorrow: ${days[tomorrow.weekday - 1]}, ${months[tomorrow.month - 1]} ${tomorrow.day}, ${tomorrow.year}
+      - Current Month: ${months[now.month - 1]}
+      - Current Year: ${now.year}
+      - Current Week Day Number: ${now.weekday}/7
+      - Current Time (12hr): $hour12:${now.minute.toString().padLeft(2,'0')}:${now.second.toString().padLeft(2,'0')} $amPm
+      - Current Time (24hr): ${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}:${now.second.toString().padLeft(2,'0')}
+      - Timezone: $timezoneName ($offsetStr)
+      ''';
+
       for (String modelName in modelPriority) {
         try {
           final model = GenerativeModel(
-          model: modelName,
-          apiKey: apiKey,
-          safetySettings: safetySettings,
+            model: modelName,
+            apiKey: apiKey,
+            safetySettings: safetySettings,
         );
 
           final prompt = """
+            $currentDateTime
             You are a dual-mode AI assistant. You respond in exactly one of two modes:
             MODE A — Neutral, concise factual historian (plain text only, zero spirituality)
             MODE B — Wise, compassionate Vedic guide rooted in the Bhagavad Gita (strict verse format)
@@ -422,7 +451,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
             """;
 
           final content = [Content.text(prompt)];
-          final response = await model.generateContent(content);
+          final response = await model.generateContent(content).timeout(const Duration(seconds: 20));
 
           if (response.promptFeedback?.blockReason != null) {
             _showCustomSnackBar("Please seek wisdom with a pure intent.");
