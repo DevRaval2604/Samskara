@@ -292,10 +292,10 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
           TODAY'S SOURCE SELECTION (SILENT — NEVER PRINT THIS):
           Before selecting a verse, first silently choose which scripture to draw from today.
           You have access to this entire corpus:
-          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Kandas, and Suktas.
-          2. The 108 Upanishads — including all Mukhya Upanishads and Mahaupanishads.
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Suktas, Kandas, Archikas, Prapathakas, Anuvakas, and every subdivision thereof.
+          2. The Upanishads — including all 108 canonical, Mukhya, Mahaupanishads, and lesser-known Upanishads.
           3. The Bhagavad Gita — all 18 Adhyayas.
-          4. The 18 Mahapuranas and all Upapuranas — including Bhagavata, Vishnu, Shiva, Skanda, and all others.
+          4. The 18 Mahapuranas and all Upapuranas — including all major, minor, and rarely cited Puranic texts.
           5. Chanakya Neeti — all chapters.
           6. The Arthashastra — all books.
 
@@ -332,9 +332,9 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
             Yajur Veda — Adhyaya [number], Mantra [number]
             Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
-            Upanishads — [Name] Upanishad, [Division] [number], Shloka [number]
+            [Name] Upanishad — [Division] [number], Shloka [number]
             Bhagavad Gita — Adhyaya [number], Shloka [number]
-            Mahapuranas — [Name] Purana, Skanda [number], Adhyaya [number], Shloka [number]
+            [Name] Purana — [Division] [number], Adhyaya [number], Shloka [number]
             Chanakya Neeti — Chapter [number], Shloka [number]
             Arthashastra — Book [number], Chapter [number], Verse [number]
 
@@ -627,10 +627,10 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
           TODAY'S SOURCE SELECTION (SILENT — NEVER PRINT THIS):
           Before selecting a verse, first silently choose which scripture to draw from today.
           You have access to this entire corpus:
-          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Kandas, and Suktas.
-          2. The 108 Upanishads — including all Mukhya Upanishads and Mahaupanishads.
+          1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda — including all Mandalas, Suktas, Kandas, Archikas, Prapathakas, Anuvakas, and every subdivision thereof.
+          2. The Upanishads — including all 108 canonical, Mukhya, Mahaupanishads, and lesser-known Upanishads.
           3. The Bhagavad Gita — all 18 Adhyayas.
-          4. The 18 Mahapuranas and all Upapuranas — including Bhagavata, Vishnu, Shiva, Skanda, and all others.
+          4. The 18 Mahapuranas and all Upapuranas — including all major, minor, and rarely cited Puranic texts.
           5. Chanakya Neeti — all chapters.
           6. The Arthashastra — all books.
 
@@ -667,9 +667,9 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
             Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
             Yajur Veda — Adhyaya [number], Mantra [number]
             Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
-            Upanishads — [Name] Upanishad, [Division] [number], Shloka [number]
+            [Name] Upanishad — [Division] [number], Shloka [number]
             Bhagavad Gita — Adhyaya [number], Shloka [number]
-            Mahapuranas — [Name] Purana, Skanda [number], Adhyaya [number], Shloka [number]
+            [Name] Purana — [Division] [number], Adhyaya [number], Shloka [number]
             Chanakya Neeti — Chapter [number], Shloka [number]
             Arthashastra — Book [number], Chapter [number], Verse [number]
 
