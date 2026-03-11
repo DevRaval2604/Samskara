@@ -329,14 +329,16 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
           If a subdivision does not exist in the traditional structure of the source, omit it entirely. Never guess. Never use placeholders.
           Use these exact formats and no others:
             Rig Veda — Mandala [number], Sukta [number], Mantra [number]
-            Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
-            Yajur Veda — Adhyaya [number], Mantra [number]
+            Sama Veda — Purvarchika [number], Prapathaka [number], Verse [number] or Uttararchika [number], Prapathaka [number], Verse [number]
+            Yajur Veda — [Adhyaya/Prapathaka] [number], Mantra [number]
             Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
-            [Name] Upanishad — [Division] [number], Shloka [number]
+            [Name] Upanishad — [Division] [number], [Subdivision] [number], [Mantra/Shloka/Karika] [number]
             Bhagavad Gita — Adhyaya [number], Shloka [number]
-            [Name] Purana — [Division] [number], Adhyaya [number], Shloka [number]
+            [Name] Purana — [Division] [number], [Subdivision] [number], Adhyaya [number], Shloka [number]
             Chanakya Neeti — Chapter [number], Shloka [number]
             Arthashastra — Book [number], Chapter [number], Verse [number]
+
+          For every scripture, use only the exact traditional subdivision names specific to that text (e.g. Adhyaya, Valli, Khanda, Prapathaka, Skanda, Amsha, Bhaga). Apply the omit rule at every level — if a subdivision does not exist or you are uncertain, omit it entirely.
 
           [SHLOK]
 
@@ -664,14 +666,16 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
           If a subdivision does not exist in the traditional structure of the source, omit it entirely. Never guess. Never use placeholders.
           Use these exact formats and no others:
             Rig Veda — Mandala [number], Sukta [number], Mantra [number]
-            Sama Veda — Purvarchika [number], Verse [number] or Uttararchika [number], Verse [number]
-            Yajur Veda — Adhyaya [number], Mantra [number]
+            Sama Veda — Purvarchika [number], Prapathaka [number], Verse [number] or Uttararchika [number], Prapathaka [number], Verse [number]
+            Yajur Veda — [Adhyaya/Prapathaka] [number], Mantra [number]
             Atharva Veda — Kanda [number], Sukta [number], Mantra [number]
-            [Name] Upanishad — [Division] [number], Shloka [number]
+            [Name] Upanishad — [Division] [number], [Subdivision] [number], [Mantra/Shloka/Karika] [number]
             Bhagavad Gita — Adhyaya [number], Shloka [number]
-            [Name] Purana — [Division] [number], Adhyaya [number], Shloka [number]
+            [Name] Purana — [Division] [number], [Subdivision] [number], Adhyaya [number], Shloka [number]
             Chanakya Neeti — Chapter [number], Shloka [number]
             Arthashastra — Book [number], Chapter [number], Verse [number]
+
+          For every scripture, use only the exact traditional subdivision names specific to that text (e.g. Adhyaya, Valli, Khanda, Prapathaka, Skanda, Amsha, Bhaga). Apply the omit rule at every level — if a subdivision does not exist or you are uncertain, omit it entirely.
 
           [SHLOK]
 
@@ -836,13 +840,15 @@ Future<Map<String, dynamic>?> _generateTomorrowLocally(String uid, String tomorr
     // 1. THE NUCLEAR STRIKE: 
     // This regex catches the literal instructions if they leak into the output.
       .replaceAll(RegExp(
-      r'Mandala X|Sukta Y|Mantra Z|' // Vedas
-      r'Archika X|Prapathaka Y|Verse Z|' // Sama Veda
+      r'Mandala X|Sukta Y|Mantra Z|' // Rig Veda
+      r'Purvarchika X|Uttararchika X|Prapathaka X|Prapathaka Y|Verse Z|' // Sama Veda
+      r'Archika X|' // Sama Veda legacy
       r'Adhyaya X|Mantra Y|Shloka Z|' // Yajur/Gita
       r'Kanda X|' // Atharva
-      r'Valli Y|' // Upanishads
+      r'Valli Y|Division X|Subdivision X|' // Upanishads/Puranas
       r'Canto X|Chapter Y|' // Puranas/Neeti
       r'Book X|' // Arthashastra
+      r'\[Adhyaya/Prapathaka\]|\[Mantra/Shloka/Karika\]|' // New format placeholders
       r'\[Number\]|\[Name\]', // General placeholders
       caseSensitive: false), '')
       .replaceAll(RegExp(r'[#\*_`~]+'), ' ') 
