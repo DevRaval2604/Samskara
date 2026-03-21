@@ -1,13 +1,14 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 Future<void> uploadStories() async {
   try {
-  final firestore = FirebaseFirestore.instance;
-  final CollectionReference stories = firestore.collection('Stories');
+    final firestore = FirebaseFirestore.instance;
+    final CollectionReference stories = firestore.collection('Stories');
 
-final List<Map<String, dynamic>> storyList = [
+    final List<Map<String, dynamic>> storyList = [
       {
         "Title": "Bhaskara II and the Gravity of Earth",
         "Category": "Ancient Science",
@@ -30,26 +31,26 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "The grammarian who created the world's first formal language system.",
         "Description": "Panini's 'Ashtadhyayi' is a 4,000-rule grammar of Sanskrit that functions like a modern computer program. He used Boolean logic and null operators long before they were defined in the West. Modern computer scientists, including those who developed Fortran and Backus-Naur Form, acknowledge Panini’s work as the foundation of formal language theory.",
-        "Modern Edge": "The lesson is the Power of Structure. Panini turned chaos into a perfect system. Once you define the rules of your own life and ethics, you stop wasting energy on confusion. Clarity is the ultimate form of discipline."
+        "Modern Edge": "The lesson is The Power of Structure. Panini turned chaos into a perfect system. Once you define the rules of your own life and ethics, you stop wasting energy on confusion. Clarity is the ultimate form of discipline."
       },
       {
-        "Title": "The Vision of Krishnadevaraya",
+        "Title": "Krishnadevaraya: The Poet-King of the South",
         "Category": "Rulers",
         "Region": "South",
-        "Summary": "The Golden Age of the Vijayanagara Empire.",
-        "Description": "Emperor Krishnadevaraya was not just a warrior but a scholar-king. He protected the South from invasions while turning Hampi into one of the world's largest and wealthiest cities. He was famous for his justice, personally listening to the grievances of commoners, and for patronizing 'Ashtadiggajas' (eight great poets) in his court.",
-        "Modern Edge": "The lesson is Staying Grounded. Despite his immense power, he sought the truth directly from the people. Don't let your success isolate you; keep your ears open to the honest, unvarnished truth of those around you."
+        "Summary": "The warrior-scholar who made Hampi the richest city on Earth.",
+        "Description": "Emperor Krishnadevaraya was the greatest ruler of the Vijayanagara Empire. He defeated the Deccan Sultanates, the Gajapatis of Odisha, and the Bahmani Sultans—all within a decade. Yet his court at Hampi was as famous for its eight brilliant poets (Ashtadiggajas) and gold-laden markets as for its armies. Foreign travelers described Hampi as a city larger and wealthier than Rome. He personally descended from his throne to hear the grievances of the poorest subjects, refusing to let power build a wall between himself and his people.",
+        "Modern Edge": "The lesson is Staying Grounded at the Top. Krishnadevaraya was undefeated, wealthy, and celebrated—and had every reason to become arrogant. Yet he kept walking down from the throne. The higher you rise, the harder you must work to stay connected to the truth around you. Success that isolates you is success that will eventually blind you."
       },
       {
         "Title": "Lalitaditya Muktapida: The Alexander of Kashmir",
         "Category": "Rulers",
         "Region": "North",
         "Summary": "The king who expanded India's borders to Central Asia.",
-        "Description": "Lalitaditya of the Karkota dynasty was a conqueror who built an empire stretching from the Caspian Sea to the Pragjyotisha (Assam). He built the magnificent Martand Sun Temple, an architectural marvel. He is remembered for his administrative reforms that ensured even the most remote parts of his empire were self-sufficient.",
+        "Description": "Lalitaditya of the Karkota dynasty was a conqueror who built an empire stretching from the Oxus River (Central Asia) to Pragjyotisha (Assam). He built the magnificent Martand Sun Temple, an architectural marvel. He is remembered for his administrative reforms that ensured even the most remote parts of his empire were self-sufficient.",
         "Modern Edge": "The lesson is Empowering Independence. A great leader doesn't make people dependent on them; they build systems where others can thrive on their own. True strength is creating a legacy that functions without your constant intervention."
       },
       {
-        "Title": "The Battle of Rajasthan",
+        "Title": "The Battle of Rajasthan: India's Wall Against the Caliphate",
         "Category": "Battles",
         "Region": "West",
         "Summary": "When a coalition of Indian Kings stopped the Umayyad Caliphate.",
@@ -57,19 +58,19 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Strength in Unity. These kings set aside rivalries to face a common threat. Stop fighting petty internal battles and recognize the bigger challenges—you are always more capable when you work as a team."
       },
       {
-        "Title": "The Battle of Tunga",
+        "Title": "The Battle of Tunga: Last Charge of the Desert Warriors",
         "Category": "Battles",
         "Region": "West",
-        "Summary": "The Rajput resistance against the Maratha-Mughal pressure.",
-        "Description": "In 1787, the combined forces of Jaipur and Jodhpur faced the professionalized battalions of Mahadji Scindia. Despite facing heavy artillery, the Rajput cavalry charged with such intensity that they forced a stalemate and eventual retreat. It remains a testament to the traditional valor of the desert warriors.",
-        "Modern Edge": "The lesson is the Power of Commitment. When you are outmatched by external odds, the only move is a full-speed, high-conviction charge. Pure heart can often break a technical advantage that logic says is unbeatable."
+        "Summary": "The Rajput cavalry that shook a modernized army with sheer ferocity.",
+        "Description": "In 1787, the combined Rajput forces of Jaipur and Jodhpur clashed with the battle-hardened battalions of Mahadji Scindia, trained and led by French officers using the latest European artillery tactics. Outnumbered and outgunned, the Rajput horsemen launched a full cavalry charge of such terrifying intensity that they broke through the infantry lines and forced the professional battalions into chaos, achieving a tactical stalemate against a force that should have annihilated them. It stands as one of the last great statements of traditional Indian cavalry valor in the age of gunpowder.",
+        "Modern Edge": "The lesson is Knowing When to Charge Fully. There are moments in life when a careful, measured response will only get you crushed slowly. The Rajputs at Tunga teach us that sometimes total, unreserved commitment to a single bold action creates more disruption than any cautious strategy. When the odds say you cannot win, your conviction becomes the wildcard."
       },
       {
         "Title": "Suheldev: The Protector of Shravasti",
         "Category": "Forgotten Heroes",
         "Region": "North",
-        "Summary": "The king who defeated the Ghaznavid army.",
-        "Description": "When Salar Masud, the nephew of Mahmud Ghazni, invaded India with a massive force, King Suheldev of Shravasti gathered local tribes and kings. In 1033 CE at Bahraich, he wiped out the entire invading army. For nearly 150 years after this battle, no foreign invader dared to cross into the Gangetic plains.",
+        "Summary": "The king who united rival chieftains and annihilated the entire Ghaznavid army.",
+        "Description": "When Salar Masud—nephew of Mahmud of Ghazni—swept into the Gangetic heartland with a massive army in 1033 CE, no single king had the strength to face him. King Suheldev of Shravasti did what seemed impossible: he reached across the deep rivalries of the region and forged a coalition of 21 local kings and tribes, uniting people who had never fought side by side. At the Battle of Bahraich, his united forces encircled and annihilated the invading army entirely—including Salar Masud himself. For nearly 150 years after this victory, no foreign power dared advance into the Gangetic plains.",
         "Modern Edge": "The lesson is Local Agency. Suheldev didn't wait for a central savior; he rallied his own community. You have the power to protect your own peace and territory without waiting for permission or external help."
       },
       {
@@ -84,32 +85,32 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Birsa Munda: Dharati Aba",
         "Category": "Freedom Fighters",
         "Region": "East",
-        "Summary": "The tribal leader who challenged the British Empire.",
-        "Description": "Birsa Munda led the 'Ulgulan' (Great Tumult) against the British and the exploitative Zamindari system. He worked to restore the tribal rights over their land and forests. Though he died in prison at age 25, his movement forced the British to pass laws protecting tribal lands, making him a legend in Indian history.",
-        "Modern Edge": "The lesson is Dignity in Roots. Birsa Munda reminds us that freedom is tied to our connection with our environment and heritage. Never let the modern world strip you of your core identity or your 'soil'."
+        "Summary": "The 25-year-old god-warrior who forced the British to change their laws.",
+        "Description": "Birsa Munda, born in 1875 into the Munda tribal community of Jharkhand, was worshipped by his people as 'Dharti Aba'—Father of the Earth. He led the 'Ulgulan' (Great Tumult), a combined spiritual and armed rebellion against both British colonial rule and the exploitative Zamindari landlord system that was stripping tribal communities of their ancestral forests and land. He organized thousands of tribal fighters and declared Munda Raj—self-rule for his people. Arrested at 25, he died in British custody before his trial, yet his movement directly forced the British to enact the Chota Nagpur Tenancy Act, which legally protected tribal land rights for the first time.",
+        "Modern Edge": "The lesson is Dignity in Roots. Birsa knew that if his people lost the forest, they lost everything—their food, their identity, and their soul. In modern life, never trade your foundational identity or your core values for temporary convenience. The roots that ground you are not weaknesses; they are the source of every strength you possess."
       },
       {
         "Title": "Alluri Sitarama Raju: Manyam Veerudu",
         "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The hero of the Rampa Rebellion.",
-        "Description": "A young man who became a sanyasi and led the tribal people of Andhra Pradesh in a guerrilla war against the British. He raided police stations to seize weapons for his people. He was so respected that even his enemies admired his integrity and tactical brilliance in the dense forests.",
-        "Modern Edge": "The lesson is Integrity in Struggle. Alluri showed that you can be a warrior without losing your spiritual center. Never let a conflict turn you into the very thing you are fighting against."
+        "Summary": "The sanyasi-warrior who turned a forest into a battlefield for freedom.",
+        "Description": "Alluri Sitarama Raju renounced worldly life to become a sanyasi, yet when the British Madras Forest Act stripped the tribal people of Andhra Pradesh of their ancestral rights to the forest, he picked up a gun. He led the Rampa Rebellion of 1922–24, raiding police stations across the Eastern Ghats to seize weapons for his people. He mastered the dense forest terrain so completely that British battalions could not locate him for months. He was so deeply respected—even by the British officers chasing him—that after his capture and execution, they acknowledged his extraordinary tactical skill and uncompromising personal integrity.",
+        "Modern Edge": "The lesson is Integrity in Struggle. Alluri never let the violence of his mission corrupt his spiritual center. He remained a sanyasi even while being a guerrilla. In any conflict—personal or professional—never let the fight turn you into the very thing you are resisting. The values you protect must also be the values you live."
       },
       {
-        "Title": "Vanchinathan and the Ashe Murder",
+        "Title": "Vanchinathan: The Signal of Tamil Resistance",
         "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The young revolutionary of Tamil Nadu.",
-        "Description": "Vanchinathan was part of a secret society dedicated to ending British rule. In 1911, he assassinated the collector Robert Ashe, who was known for suppressing the Swadeshi shipping movement. Vanchinathan then took his own life to avoid capture, leaving a note stating that his action was to alert the world to the plight of India.",
-        "Modern Edge": "The lesson is the Weight of a Signal. Vanchinathan believed that sometimes a single, dramatic act of defiance is needed to wake up a sleeping conscience. It's a reminder to be bold when silence is no longer an option."
+        "Summary": "The young revolutionary who gave his life to wake the world.",
+        "Description": "Vanchinathan was a member of the Bharata Mata Association, a secret revolutionary society in Tamil Nadu dedicated to ending British rule. In 1911, he assassinated collector Robert William d'Escourt Ashe at Maniyachi railway station—Ashe was the official responsible for suppressing the Swadeshi shipping movement and the prosecution of freedom fighters. Immediately after, Vanchinathan took his own life to deny capture. He left behind a letter explaining that his act was not of personal revenge but a deliberate signal to the world about the oppression India was enduring—a message written in sacrifice.",
+        "Modern Edge": "The lesson is The Weight of a Signal. Vanchinathan understood that sometimes a single, unflinching act of defiance is required to rupture a sleeping conscience. It is a reminder that when every conventional path is blocked, a person of true conviction will find an unconventional one. Be bold enough to send a signal when silence has become complicity."
       },
       {
         "Title": "Madhava: The Father of Calculus",
         "Category": "Ancient Science",
         "Region": "South",
         "Summary": "The Kerala mathematician who found infinite series before Newton.",
-        "Description": "Madhava of Sangamagrama founded the Kerala School of Astronomy and Mathematics in the 14th century. He discovered the infinite series for Pi, sine, and cosine—concepts that form the basis of modern Calculus. His work was centuries ahead of European mathematicians like Gregory, Leibniz, and Newton.",
+        "Description": "Madhava of Sangamagrama, working from a small village in Kerala in the 14th century, single-handedly founded the Kerala School of Astronomy and Mathematics. He discovered the infinite series expansions for Pi, sine, cosine, and arctangent—mathematical tools that would only be independently found in Europe 200 years later by Gregory, Leibniz, and Newton, who received full credit in Western textbooks. Madhava had no academic institution, no state patronage, and no access to the mathematical traditions of the Islamic world. He derived these results through pure logic, in a village, with no successor network to carry his name westward. His work is the clearest example of how geography, not genius, determines who gets remembered.",
         "Modern Edge": "The lesson is Depth over Distance. Madhava outperformed the world from an isolated village. Your location doesn't limit your potential—deep, persistent work can change the world from anywhere."
       },
       {
@@ -125,7 +126,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Ancient Science",
         "Region": "West",
         "Summary": "The mathematician who taught the world how to use 'Zero'.",
-        "Description": "In the 7th century, Brahmagupta wrote 'Brahmasphutasiddhanta'. He was the first to give rules to compute with zero and negative numbers. He referred to positive numbers as 'property' and negative numbers as 'debt', creating the logical framework for modern algebra and accounting.",
+        "Description": "In 628 CE, Brahmagupta of Bhillamala wrote the 'Brahmasphutasiddhanta'—the first mathematical text to treat zero as a number in its own right rather than a placeholder. He gave explicit rules for operations involving zero and negative numbers, defining negatives as 'debt' and positives as 'property' to make the logic concrete. He also solved quadratic equations, worked out interpolation methods for astronomical tables, and calculated the circumference of the Earth to within 1% of the modern figure. His work was translated into Arabic in the 8th century and became the direct source through which Indian numerical logic reached the Islamic world—and eventually Europe. The algebra you learned in school traces a direct line back to this text.",
         "Modern Edge": "The lesson is Embracing the 'Negative'. Brahmagupta proved that 'Zero' and 'Debt' (negatives) are manageable if you have a system. Don't fear the low points in life; build a logical framework to navigate them."
       },
       {
@@ -133,7 +134,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "East",
         "Summary": "The widow who defied the British East India Company to protect the poor.",
-        "Description": "Rani Rashmoni was a visionary leader who managed a vast estate in Bengal. When the British imposed a tax on poor fishermen, she blocked the shipping trade on the Hooghly river until the tax was repealed. She built the Dakshineswar Kali Temple and stood as a pillar of strength against social and colonial oppression.",
+        "Description": "Rani Rashmoni rose from modest origins to command one of the largest estates in Bengal. When the British imposed a crushing tax on poor Ganges fishermen, she did not petition or protest—she leased the entire Hooghly river stretch and blocked all British shipping until the tax was revoked. The British had no choice but to comply. She later built the Dakshineswar Kali Temple—the very temple where Ramakrishna Paramahamsa spent his life—and became one of the first women in India to challenge both colonial authority and caste orthodoxy using the one weapon no one could deny: economic leverage.",
         "Modern Edge": "The lesson is Using Leverage for Good. She didn't just complain; she used her resources to hit the oppressors where it mattered. True power is found in using what you have to protect those who have nothing."
       },
       {
@@ -141,23 +142,23 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "West",
         "Summary": "The Admiral who was never defeated by European navies.",
-        "Description": "Kanhoji Angre was the Chief of the Maratha Navy. For over 30 years, he defended the Konkan coast against the British, Dutch, and Portuguese. He developed a system of coastal forts and fast, maneuverable ships that utilized local currents to trap and defeat the heavy, slow-moving European vessels.",
+        "Description": "Kanhoji Angre was the Sarkhel—Supreme Commander—of the Maratha Navy under Chhatrapati Shahu. For over 30 years, no European ship could sail the Konkan coast without his permission. He captured British, Dutch, and Portuguese vessels with impunity, extracting ransom and releasing them when it suited him. The British East India Company, humiliated, launched five major naval expeditions against him between 1707 and 1720—and lost every single one. He died undefeated in 1729 after three decades of complete maritime dominance, having never lost his home waters to any foreign power. The British only gained control of the Konkan coast a generation after his death, when his sons fell into civil war with each other.",
         "Modern Edge": "The lesson is Mastering Your Environment. Victory isn't about being the biggest; it's about being the most adapted to your surroundings. Use your 'home turf' advantage to outmaneuver any giant."
       },
       {
         "Title": "Kapilendra Deva and the Suryavamsa Empire",
         "Category": "Rulers",
         "Region": "East",
-        "Summary": "The king who defended Odisha from three directions.",
-        "Description": "Rising from a humble background to become the Emperor of Odisha, Kapilendra Deva expanded his kingdom from the Ganges to the Kaveri. He was a great patron of Odia literature and culture, ensuring that his people’s identity remained strong despite constant external threats.",
-        "Modern Edge": "The lesson is Multi-Front Resilience. Kapilendra Deva thrived because he empowered capable people. If you are facing many challenges at once, don't try to micro-manage—trust and empower your support system."
+        "Summary": "The general who rose from nothing to rule an empire from the Ganges to the Kaveri.",
+        "Description": "Kapilendra Deva began as a general and seized the Odishan throne through sheer military brilliance. He built the Suryavamsa Empire, expanding Odisha’s borders to the Ganges in the North and the Kaveri in the South—one of the largest empires in 15th-century India. He simultaneously defended against the Bahmani Sultanate, the Vijayanagara Empire, and the Bengal Sultanate—three powerful enemies on three fronts. A devoted patron of Odia literature and the Jagannath temple tradition, he guarded his people’s cultural identity as fiercely as their borders.",
+        "Modern Edge": "The lesson is Multi-Front Resilience. Kapilendra didn’t collapse under pressure from three directions because he had built capable generals and a cultural identity that held the center firm. When you face many challenges at once, invest in your support systems and your inner foundation—they are what prevent you from being overwhelmed."
       },
       {
         "Title": "The Battle of Puvathur",
         "Category": "Battles",
         "Region": "South",
         "Summary": "The unsung resistance against the Portuguese expansion.",
-        "Description": "When the Portuguese tried to dominate the spice trade in Kerala, local chieftains and the Zamorin of Calicut fought back. In the Battle of Puvathur, the local forces used guerrilla naval tactics to destroy Portuguese supply lines, delaying European colonization of the interior for decades.",
+        "Description": "When the Portuguese arrived on the Malabar coast in the early 16th century, they attempted to monopolise the spice trade by force—demanding that Indian merchants obtain Portuguese passes and pay tribute to sail their own coastal waters. The Zamorin of Calicut and the local chieftains refused. In the Battle of Puvathur, the Malabar forces used shallow-water guerrilla tactics to destroy Portuguese supply ships, exploiting the fact that local boatmen knew every creek and sandbar while the Portuguese galleons were built for open ocean. The victory delayed Portuguese interior colonisation for decades and established the template of coastal resistance that the Kunjali Marakkars and later Kanhoji Angre would perfect over the next two centuries.",
         "Modern Edge": "The lesson is Tactical Patience. They didn't attack the main fleet; they cut off the supplies. To solve a big problem, don't hit it head-on—weaken the things that keep the problem alive first."
       },
       {
@@ -165,7 +166,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Battles",
         "Region": "East",
         "Summary": "The final Ahom victory that expelled the Mughals forever.",
-        "Description": "In 1682, the Ahom army led by Dihingia Alun Borbarua fought the Mughals at Itakhuli. This decisive victory pushed the Mughal border back to the Manas river. After this battle, the Mughals never attempted to invade the Brahmaputra valley again, securing the sovereignty of Assam.",
+        "Description": "The Battle of Itakhuli in 1682 was the final chapter of a century-long Mughal attempt to conquer Assam. The Ahom general Dihingia Alun Borbarua lured the Mughal garrison deep into the Brahmaputra floodplain, cut off their river supply lines, and then struck. The surviving Mughal forces were pushed back to the Manas river—the border that the Ahom kingdom had defended since Lachit Borphukan's great victory at Saraighat a decade earlier. After Itakhuli, no Mughal force ever attempted the Brahmaputra valley again. Assam remained one of the only regions in the subcontinent that the Mughal Empire never subdued, and that sovereign independence held until the British arrived 140 years later.",
         "Modern Edge": "The lesson is Setting Uncrossable Lines. Once you defeat a challenge, set a firm boundary to ensure it never returns. Respect is earned when you decide what you will absolutely not tolerate."
       },
       {
@@ -173,7 +174,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Freedom Fighters",
         "Region": "East",
         "Summary": "The 18-year-old who walked to the gallows with a smile.",
-        "Description": "Khudiram Bose was a teenage revolutionary in Bengal. He attempted to assassinate a cruel British judge to protest colonial atrocities. When he was caught and sentenced to death, he went to the gallows holding the Bhagavad Gita, becoming a symbol of eternal youth and sacrifice for India's freedom.",
+        "Description": "Khudiram Bose was 18 years old when he was hanged by the British—making him one of the youngest martyrs of the independence movement. In 1908, he and Prafulla Chaki threw a bomb at the carriage of Magistrate Kingsford, a judge notorious for harsh sentences against Bengali protesters. They missed Kingsford; two British women were killed instead. Chaki shot himself to avoid arrest; Khudiram was captured. At his trial, he showed no remorse and no fear. He went to the gallows clutching the Bhagavad Gita, smiling. The day after his execution, young men across Bengal began wearing dhotis with a specific border pattern in his honour—a fashion that became a silent, unspoken declaration of rebellion that spread for years.",
         "Modern Edge": "The lesson is Purpose over Fear. Khudiram found something worth living for, which made him fearless toward the end. When your conviction is deep enough, the world loses its power to intimidate you."
       },
       {
@@ -181,16 +182,16 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Freedom Fighters",
         "Region": "East",
         "Summary": "The tribal chief who fought the British for four years.",
-        "Description": "U Tirot Sing, a Khasi chief, realized the British were using road construction as a pretext for colonization. He organized his tribesmen and fought a fierce guerrilla war in the dense jungles of Meghalaya. Despite being outgunned, his bravery earned him the respect of even his British captors.",
+        "Description": "U Tirot Sing was the Syiem (chief) of Nongkhlaw in the Khasi Hills when the British arrived with an offer to build roads through his territory. He recognized the pattern: roads meant troops, troops meant control, and control meant the end of Khasi sovereignty. In 1829, he killed two British officers and launched a four-year guerrilla campaign in the forests of present-day Meghalaya—terrain so difficult that British forces, despite their firepower, could not suppress him. He was finally captured in 1833 through betrayal and was deported to Dhaka, where he died in captivity. He is the first known freedom fighter from Northeast India, and his resistance predates the 1857 uprising by nearly three decades.",
         "Modern Edge": "The lesson is Discerning True Intent. Tirot Sing teaches us to look behind 'improvements' to see if they come with hidden costs. Always value your freedom more than an easy path provided by others."
       },
       {
         "Title": "The Bravehearts of Tarapur",
-        "Category": "Battles",
-        "Region": "Central",
-        "Summary": "The 1932 massacre that mirrored Jallianwala Bagh.",
-        "Description": "In a small village in Bihar, 34 young freedom fighters were killed by British police while trying to hoist the Tricolor flag at a government building. This remains the largest collection of martyrs in a single incident during the freedom struggle after 1919, yet their story remains largely untold.",
-        "Modern Edge": "The lesson is Persistent Visibility. They died to keep the symbol alive. If your mission is right, keep showing up. As long as the 'flag' is visible, the movement hasn't failed."
+        "Category": "Freedom Fighters",
+        "Region": "East",
+        "Summary": "The forgotten massacre where 34 young lives were given for a flag.",
+        "Description": "On February 15, 1932, in the village of Tarapur in Bihar's Munger district, a group of young freedom fighters marched to hoist the Tricolor at the local government building during the Civil Disobedience Movement. British police opened fire on the unarmed protesters. Thirty-four people were killed—the largest single massacre of freedom fighters in a single incident after the Jallianwala Bagh massacre of 1919. Their names are largely absent from mainstream history books, yet their sacrifice occurred in a small village, proving that the heartbeat of India's freedom struggle was not just in cities but in every nameless lane of the country.",
+        "Modern Edge": "The lesson is Persistent Visibility. They died to keep the symbol alive and in plain sight. In your own life, don't retreat when people try to suppress what you stand for. As long as your 'flag' is raised and visible—your values, your mission, your truth—the movement has not failed. Show up. Keep the flag flying."
       },
       {
         "Title": "Kanada: The Father of Atomic Theory",
@@ -237,56 +238,56 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Freedom Fighters",
         "Region": "South",
         "Summary": "The first female ruler to lead an armed rebellion against the British.",
-        "Description": "In 1824, 33 years before the 1857 mutiny, Rani Chennamma stood against the British 'Doctrine of Lapse'. She defeated the British forces in the first battle at Kittur. Though she was eventually captured, her defiance became a rallying cry for the later freedom movement in Karnataka.",
+        "Description": "Rani Chennamma of Kittur was the first Indian ruler to take up arms against the British East India Company's 'Doctrine of Lapse'—the policy that denied Indian rulers the right to adopt heirs and used heirless kingdoms as justification for annexation. In October 1824, 33 years before the 1857 uprising, her forces defeated the British army in battle and killed Collector John Thackeray. The Company retaliated with a larger force and captured Kittur after a siege. Chennamma was imprisoned in Bailhongal Fort, where she died in 1829, still in captivity. Her name became a battle cry in Karnataka's independence movement, and she is among the earliest figures to demonstrate that armed resistance to colonial policy was possible—and could win.",
         "Modern Edge": "The lesson is Early Resistance. Don't wait for a trend to stand against what is wrong. If you see an unfair path in your life, be the first to challenge it before it becomes the status quo."
       },
       {
-        "Title": "The Battle of Korgaon",
+        "Title": "The Battle of Wadgaon",
         "Category": "Battles",
         "Region": "West",
         "Summary": "The Maratha victory that broke the myth of British invincibility.",
-        "Description": "During the First Anglo-Maratha War in 1779, the Maratha forces led by Mahadji Scindia lured the British army deep into the Western Ghats. By cutting off their supplies and using the rugged terrain, the Marathas forced the British to sign the Treaty of Wadgaon, the only time the British army ever surrendered in India.",
+        "Description": "During the First Anglo-Maratha War in 1779, the Maratha forces led by Mahadji Scindia lured the British army deep into the Western Ghats. By cutting off their supplies and using the rugged terrain, the Marathas forced the British to sign the humiliating Treaty of Wadgaon—the only time the British army ever surrendered in India.",
         "Modern Edge": "The lesson is Playing to Your Strengths. Never fight on someone else's terms. Lure your challenges into the 'narrow passes' of your specific expertise where your strengths shine and their advantages become irrelevant."
       },
       {
-        "Title": "The Siege of Arcot",
+        "Title": "The Siege of Arcot: When European Rivalry Consumed India",
         "Category": "Battles",
         "Region": "South",
-        "Summary": "A turning point in the struggle for Southern India.",
-        "Description": "In 1751, Robert Clive and Chanda Sahib fought a grueling 50-day siege. This battle changed the course of the Carnatic Wars and established British dominance over the French in India. It was a brutal conflict that showed how European rivalries played out on Indian soil.",
-        "Modern Edge": "The lesson is the Power of Endurance. Success isn't always about who has the better plan or more talent; it is often about who can sit through the pressure for one day longer than the other person. Your ability to outlast a difficult season is a skill in itself."
+        "Summary": "How a 50-day siege reshaped the destiny of the entire subcontinent.",
+        "Description": "In 1751, the Nawab of Arcot, Chanda Sahib, backed by the French, held the fort at Arcot while Robert Clive's British-aligned forces besieged it. The 50-day siege became the pivotal moment of the Carnatic Wars—a conflict that was, at its core, a European proxy war fought on Indian soil with Indian lives. The tragedy of Arcot is not one of valor but of division: the splintering of Indian kingdoms and their reliance on rival European powers created the very opening that allowed the British East India Company to emerge as the dominant political force in the South, setting the stage for the loss of the entire subcontinent.",
+        "Modern Edge": "The lesson is The Danger of Borrowed Power. Chanda Sahib and his rivals both sought European allies to win internal disputes, and in doing so, handed over the keys of India. Never invite an outsider to settle an internal conflict—the 'ally' you bring in today will become the master who stays tomorrow. Solve your battles from within."
       },
       {
         "Title": "Hemchandra Vikramaditya: The Last Hindu Emperor of Delhi",
         "Category": "Forgotten Heroes",
         "Region": "North",
-        "Summary": "The general who won 22 consecutive battles.",
-        "Description": "Hemu started as a commoner and rose to become the Chief Minister. He won 22 battles against Afghan rebels and Mughal forces. In 1556, he captured Delhi and declared himself Emperor 'Vikramaditya'. He was on the verge of winning the Second Battle of Panipat until a stray arrow struck his eye, changing the fate of India.",
-        "Modern Edge": "Hemu teaches us about the fragility of Momentum. You can do everything right for 22 steps, but life can still turn on a single moment. It is a reminder to remain humble in victory and to always protect your most vulnerable points when you are at the finish line."
+        "Summary": "The vegetable seller's son who won 22 battles and nearly changed history.",
+        "Description": "Hemu began life as a grain and saltpeter trader and rose, through pure ability, to become the Chief Minister and General of Adil Shah Suri. He won 22 consecutive battles against Afghan and Mughal forces across North India. In October 1556, he captured Delhi and declared himself Emperor 'Vikramaditya'—the last non-Muslim ruler to sit on the throne of Delhi. He was on the verge of a total victory at the Second Battle of Panipat when a stray arrow pierced his eye through a gap in his armor. Rendered unconscious, his massive army lost heart and broke. He was later executed by Akbar's regent Bairam Khan. One inch of fate undid 22 battles of brilliance.",
+        "Modern Edge": "The lesson is Protecting Your Blind Spot. Hemu teaches us about the fragility of momentum. You can do everything right for 22 steps, but life can turn on the one vulnerability you left unguarded. Always remain aware of your single point of failure—because your enemy certainly is."
       },
       {
-        "Title": "The 13 Martyrs of Mahad",
+        "Title": "The Mahad March: Ambedkar's War for the Right to Water",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "The struggle for basic human dignity and water rights.",
-        "Description": "Led by Dr. B.R. Ambedkar in 1927, thousands marched to the Chavdar Tank in Mahad to assert their right to drink water. This was not a battle of swords, but a battle for civil rights. It marked the beginning of a social revolution that eventually shaped the Constitution of India.",
-        "Modern Edge": "The lesson is fighting for the Fundamentals. We often get distracted by luxuries, but these martyrs remind us that the most important battles are for basic dignity. If you base your actions on a universal truth—like the right to water—your movement becomes unstoppable."
+        "Summary": "Dr. Ambedkar's march that turned the right to drink water into a revolution.",
+        "Description": "On March 20, 1927, Dr. B.R. Ambedkar led thousands of people to the Chavdar Tank in Mahad, Maharashtra, to assert their fundamental human right to drink from a public water source—a right that was denied to Dalit communities by centuries of caste oppression. The march was met with violent retaliation. Ambedkar returned later that year and publicly burned the Manusmriti. This moment was the opening act of a social revolution that would eventually culminate in Ambedkar drafting the Constitution of India—the document that legally abolished caste-based discrimination forever.",
+        "Modern Edge": "The lesson is Fighting for the Fundamentals. The most important battles are not for luxury but for basic dignity. When you anchor your mission in a universal, undeniable truth—like the right to water—no argument can delegitimize it. Build your life's convictions on foundations so basic and so right that even your opponents cannot deny their justice."
       },
       {
         "Title": "Komaram Bheem: Jal, Jangal, Zameen",
         "Category": "Freedom Fighters",
         "Region": "Central",
-        "Summary": "The Gond leader who fought the Nizam's tyranny.",
-        "Description": "Komaram Bheem led a rebellion against the Nizam of Hyderabad's forest taxes. He coined the slogan 'Jal, Jangal, Zameen' (Water, Forest, Land), asserting that those who live in the forest should own its resources. He fought using traditional weapons against modern guns until his martyrdom.",
-        "Modern Edge": "The lesson is about Identity and Roots. Bheem realized that freedom is hollow if you don't have control over the resources that sustain you. In life, make sure you own your own narrative and your own foundations, or you will always be at the mercy of others."
+        "Summary": "The Gond warrior who coined a battle cry that still echoes today.",
+        "Description": "Komaram Bheem was born into the Gond tribal community of Adilabad, Telangana. When the Nizam of Hyderabad's forest laws stripped his people of their ancestral right to live in and farm the forests of Babejhari, Bheem organized a grassroots armed resistance. He divided his fighters into cells, assigned them separate tasks, and used the dense jungle as both cover and weapon—tactics the British themselves would later study. For years he evaded capture, becoming a living legend among the tribes. He coined the slogan 'Jal, Jangal, Zameen' (Water, Forest, Land)—the earliest articulation of environmental sovereignty in India. He was killed in a surprise ambush by Nizam's forces in 1940, but his slogan outlived every weapon used against him and became the foundation of tribal rights movements across South Asia.",
+        "Modern Edge": "The lesson is Owning Your Foundation. Bheem understood that freedom without land, water, and forest is just an empty word. In your own life, identify the three or four foundations that everything else depends on—your health, your relationships, your values, your craft—and protect them as fiercely as Bheem protected his forest. Whoever controls your foundation controls your future."
       },
       {
         "Title": "Bhikaiji Cama: The Mother of the Indian Revolution",
         "Category": "Freedom Fighters",
         "Region": "West",
         "Summary": "The woman who unfurled the first Indian flag on foreign soil.",
-        "Description": "In 1907, at the International Socialist Congress in Germany, Madam Cama hoisted the first version of the Indian National Flag. She spent her life in exile in Europe, organizing Indian revolutionaries and speaking out against British imperialism despite failing health and constant surveillance.",
-        "Modern Edge": "Cama’s lesson is about Perspective from Distance. Sometimes you can see the truth of your home better when you are away from it. She used the global stage to fight local battles, showing us that if your voice is being suppressed in one place, you should find a new platform to be heard."
+        "Description": "Bhikaiji Cama was a Parsi woman from Bombay who contracted plague while nursing patients during the 1896 epidemic, was sent to Europe to recover, and never came home—because she used the exile to become one of the most formidable voices for Indian independence in the world. In 1907, at the International Socialist Congress in Stuttgart, Germany, she unfurled the first version of the Indian National Flag on a foreign stage, declaring India's right to freedom before an audience of delegates from across the world. She ran a revolutionary journal, funded Indian students in Paris, and worked with Shyamji Krishna Varma and Vinayak Savarkar to establish the India House network. The British government repeatedly pressured France to extradite her; France refused. She returned to India in 1935, dying six months later.",
+        "Modern Edge": "The lesson is Perspective from Distance. Sometimes you can see the truth of your home most clearly when you are standing far from it. Cama used the world stage to fight her most local battle. If your voice is being suppressed in one place, find a wider platform—the world is large enough to carry your truth even when your own corner tries to silence it."
       },
       {
         "Title": "Sushruta: The Father of Surgery",
@@ -294,15 +295,15 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "The sage who performed plastic surgery 2,500 years ago.",
         "Description": "Long before modern medicine, Sushruta practiced in Kashi. He authored the Sushruta Samhita, describing over 300 surgical procedures and 120 surgical instruments. He is most famous for 'Rhinoplasty' (reconstructing a nose), using a flap of skin from the cheek or forehead—a technique essentially unchanged in modern surgery today.",
-        "Modern Edge": "The lesson is the Value of Sharing Knowledge. Sushruta didn't just keep his skills to himself; he documented them so perfectly that they are still used today. True mastery isn't just in the doing; it is in the teaching and the legacy you leave for others to build upon."
+        "Modern Edge": "The lesson is The Value of Sharing Knowledge. Sushruta didn't just keep his skills to himself; he documented them so perfectly that they are still used today. True mastery isn't just in the doing; it is in the teaching and the legacy you leave for others to build upon."
       },
       {
         "Title": "Aryabhata and the Concept of Zero",
         "Category": "Ancient Science",
         "Region": "North",
         "Summary": "The mathematician who calculated the Earth's circumference.",
-        "Description": "In the 5th century, Aryabhata calculated the value of Pi to four decimal places and proposed that the Earth is spherical and rotates on its axis. By defining 'Zero' not just as a symbol but as a mathematical concept, he laid the foundation for modern computing and space exploration.",
-        "Modern Edge": "Aryabhata teaches us to Question the Defaults. While everyone else believed the Earth was static, he looked at the data and dared to see a different world. Don't just accept what society tells you is true—recalculate the model yourself."
+        "Description": "In the 5th century CE, working from Kusumapura (modern Patna), Aryabhata authored the 'Aryabhatiya'—a mathematical masterpiece written when he was just 23 years old. He calculated Pi to four decimal places, correctly proposed that the Earth rotates on its own axis, and calculated the solar year to within 3 minutes of modern precision. He defined zero not merely as a symbol but as a fully functional mathematical concept—an insight so foundational that it became the engine of modern algebra, computing, and space science.",
+        "Modern Edge": "The lesson is Questioning the Defaults. While every scholar around him accepted that the sky moved, Aryabhata looked at the same sky and recalculated the model. Don't accept inherited assumptions just because everyone else does. Be willing to look at the same facts and arrive at a completely different, truer conclusion."
       },
       {
         "Title": "Chhatrapati Shivaji Maharaj: The Father of Indian Navy",
@@ -314,50 +315,50 @@ final List<Map<String, dynamic>> storyList = [
       },
       {
         "Title": "Rani Durgavati’s Defiance",
-        "Category": "Freedom Fighters",
+        "Category": "Rulers",
         "Region": "Central",
         "Summary": "The Gondwana Queen who chose death over surrender.",
-        "Description": "Rani Durgavati ruled the Gondwana kingdom with great efficiency. When the Mughal army under Akbar attacked, she led her troops personally. Even when wounded by arrows in the eye and neck, she refused to surrender, choosing to take her own life with her dagger to maintain her dignity and honor.",
-        "Modern Edge": "Durgavati’s lesson is about Personal Sovereignty. She understood that while she couldn't control the outcome of the battle, she could always control her own dignity. Never allow your circumstances to force you into a compromise that betrays your core identity."
+        "Description": "Rani Durgavati was the Chandela princess who became queen of the Gond kingdom of Gondwana through marriage and sole ruler after her husband's early death. She governed for 15 years with such administrative precision that her treasury was said to be the richest in Central India. In 1564, the Mughal general Asaf Khan—acting on Akbar's orders—invaded Gondwana for its wealth. Durgavati took command of her army herself, choosing the forested battlefield of Narrai where Mughal artillery would be neutralised by terrain. She fought two days of ferocious combat. Wounded by an arrow to the eye and then to the neck, she refused to be carried from the field and refused all calls to surrender. She pulled the second arrow out with her own hand and used it to take her own life rather than face capture. She remains the gold standard of sovereign dignity under absolute pressure.",
+        "Modern Edge": "The lesson is Personal Sovereignty. Durgavati understood that while she could not control the outcome of the battle, she could always control her own dignity. Never allow your circumstances to force you into a compromise that betrays your core identity. Your dignity is the one thing no enemy can take—only you can surrender it."
       },
       {
         "Title": "Raja Raja Chola I and the Great Living Temples",
         "Category": "Rulers",
         "Region": "South",
         "Summary": "The king who built the Brihadisvara Temple without a shadow.",
-        "Description": "Raja Raja Chola I was a visionary who built the Brihadisvara Temple in Thanjavur. The temple's 'Kumbam' (top stone) weighs 80 tons and was moved to the top via a 6km long ramp. His administration was so advanced that it included an early form of local self-government and a massive land survey.",
+        "Description": "Raja Raja Chola I, who ruled from 985 to 1014 CE, transformed the Chola kingdom into the dominant power of South Asia. He conquered Sri Lanka, the Maldives, and the western coast of India, and his navy reached Southeast Asia. He built the Brihadisvara Temple in Thanjavur—an engineering marvel whose 80-ton capstone was moved to the top of its 66-metre tower via a 6-kilometre inclined ramp, a feat of logistics with no parallel in the ancient world. His administrative system was equally remarkable: he conducted the first comprehensive land survey in Indian history, established elected village assemblies with term limits and disqualification criteria for the corrupt, and created a system of local governance so sophisticated that historians cite it as an early form of representative democracy.",
         "Modern Edge": "The lesson is Thinking in Centuries. Raja Raja didn't build for his own ego; he built for eternity. When you start a project, ask yourself: is this just for today, or is the foundation strong enough to carry a heavy burden for a thousand years?"
       },
       {
         "Title": "The Battle of Haldighati",
         "Category": "Battles",
-        "Region": "North",
-        "Summary": "Maharana Pratap's legendary stand for independence.",
-        "Description": "In 1576, Maharana Pratap faced the massive Mughal army. Despite being outnumbered, Pratap and his loyal horse Chetak fought with legendary bravery. Pratap never surrendered his pride or his land, living in the Aravalli forests for years to continue his struggle for Mewar's freedom.",
-        "Modern Edge": "The lesson is the Power of the Unbroken Spirit. You aren't defeated when you lose your comfort; you are only defeated when you stop fighting. As long as you are still in the 'forest' and refusing to yield, you are still the master of your destiny."
+        "Region": "West",
+        "Summary": "The narrow mountain pass where Mewar's spirit refused to die.",
+        "Description": "On June 18, 1576, in the blood-red mountain pass of Haldighati in the Aravalli range, Maharana Pratap's force of 20,000 men clashed with a Mughal army of over 80,000 commanded by Man Singh I. What Pratap lacked in numbers he compensated with terrain mastery and ferocity—his Bhil archers rained arrows from the cliffs, his cavalry broke through the Mughal center, and Pratap himself fought his way to Man Singh's elephant before being cut off. His legendary horse Chetak, mortally wounded by an elephant's tusk, carried Pratap to safety across a stream before collapsing. Though Pratap had to retreat, the Mughals failed in their primary objective: capturing or killing him. He disappeared into the Aravallis, and the battle that 'defeated' him became the beginning of a 20-year guerrilla campaign that eventually reclaimed most of Mewar—without ever surrendering.",
+        "Modern Edge": "The lesson is The Power of the Unbroken Spirit. The Mughals won the field but lost the war, because Pratap refused to let a single defeat define the outcome. You are not finished when you retreat—you are finished only when you stop returning. The pass at Haldighati was narrow, but what came out of it was unstoppable."
       },
       {
         "Title": "The Naval Battle of Colachel",
         "Category": "Battles",
         "Region": "South",
         "Summary": "When an Indian Kingdom defeated a European superpower.",
-        "Description": "In 1741, King Marthanda Varma of Travancore defeated the Dutch East India Company. This was the first time an Asian power had decisively defeated a European naval force in a organized war, effectively ending Dutch colonial ambitions in India.",
-        "Modern Edge": "The lesson is that Size is Not Destiny. A small, focused force can defeat a global giant if it picks the right place to stand. Do not be intimidated by the 'big' things in life. If you focus your energy on one specific goal, you can overcome any obstacle."
+        "Description": "In August 1741, a Dutch fleet of 14 ships carrying over 1,000 soldiers sailed into Colachel Harbour to establish Dutch dominance over the pepper trade. King Marthanda Varma of Travancore met them with a navy trained by Eustachius De Lannoy, a Dutch captain he had already captured in an earlier skirmish and converted into his own commander. The Travancore fleet used the shallow coastal waters to outmaneuver the heavy Dutch vessels, and in a decisive engagement, sank or captured the entire fleet. De Lannoy himself was captured again and spent the rest of his life serving Travancore. It remains the only decisive Asian naval victory over a European power in the pre-industrial era.",
+        "Modern Edge": "The lesson is Size Is Not Destiny. A small, focused force can defeat a global giant if it picks the right place to stand. Do not be intimidated by the 'big' things in life. If you focus your energy on one specific goal, you can overcome any obstacle."
       },
       {
         "Title": "Banda Singh Bahadur’s Justice",
         "Category": "Forgotten Heroes",
         "Region": "North",
-        "Summary": "The man who abolished the Zamindari system.",
-        "Description": "An ascetic turned warrior, Banda Singh Bahadur was sent by Guru Gobind Singh to protect the people of Punjab. He established a state where the tillers owned the land, abolishing the oppressive Zamindari system, and issued coins in the name of the Gurus before his martyrdom.",
+        "Summary": "The ascetic-warrior who gave India's farmers the land they tilled—and died for it.",
+        "Description": "Banda Singh Bahadur was a Hindu ascetic living as a recluse when Guru Gobind Singh met him, recognized his latent fire, and sent him to Punjab to defend the people. He assembled a peasant army, captured the Mughal city of Samana, and established the first Sikh state where land was redistributed from landlords to the farmers who actually worked it—a radical act of justice 200 years before modern land reform. He minted coins inscribed with the Guru's name, asserting sovereignty on behalf of the people. Captured by the Mughals in 1716, he and his 700 companions were offered their lives if they converted. Every single one refused. He was executed in Delhi after watching his companions martyred one by one, never once flinching.",
         "Modern Edge": "The lesson is Shared Prosperity. Banda Singh realized that a movement only stays strong if the people involved have a real stake in its success. In your life, empower the people around you. When everyone wins, the collective defense becomes unbreakable."
       },
       {
         "Title": "Ahilyabai Holkar: The Philosopher Queen",
         "Category": "Rulers",
         "Region": "Central",
-        "Summary": "Rebuilding India's spiritual spine.",
-        "Description": "After losing her family, she didn't retreat. She ruled Indore for 30 years, building temples from Somnath to Kashi. She was known for her accessibility to her subjects and her strict adherence to Dharma, earning the title 'Matoshree'.",
+        "Summary": "The widow who ruled with iron justice, built temples across India, and became the conscience of her era.",
+        "Description": "Ahilyabai Holkar lost her husband, her son, and her son-in-law within years of each other—yet she did not collapse. She took direct administrative control of the Holkar kingdom and ruled with a precision and justice that astonished her contemporaries. She rebuilt the Kashi Vishwanath Temple in Varanasi, the Somnath Temple in Gujarat, and dozens of ghats and dharamshalas across the subcontinent—all from her own treasury. She held open court daily so that the poorest subject could petition directly to her. British observer John Malcolm wrote that he had never seen governance so steady, just, and efficient. She earned the title 'Matoshree'—Mother—from a people who genuinely felt cared for.",
         "Modern Edge": "The lesson is Resilience through Service. When Ahilyabai lost her family, she didn't drown in grief; she turned that energy toward rebuilding the world for others. The best way to heal your own wounds is to help heal the world."
       },
       {
@@ -366,7 +367,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "The scholar who described binary numbers 2,000 years ago.",
         "Description": "In his work 'Chandaḥśāstra', Pingala analyzed Sanskrit poetry and prosody. To map out patterns of short and long syllables, he created a system that is functionally identical to modern binary code (0s and 1s). He also described the 'Meru Prastara', which is known today in the West as Pascal's Triangle.",
-        "Modern Edge": "The lesson is finding Logic in the Beautiful. Pingala looked at the art of poetry and found the math underneath it. Everything in your life—even the chaotic or artistic parts—has an underlying logic. Learn to see the patterns."
+        "Modern Edge": "The lesson is Finding Logic in the Beautiful. Pingala looked at the art of poetry and found the math underneath it. Everything in your life—even the chaotic or artistic parts—has an underlying logic. Learn to see the patterns."
       },
       {
         "Title": "Thiruvalluvar: The Divine Poet",
@@ -398,7 +399,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "South",
         "Summary": "The king who dedicated his entire kingdom to the Divine.",
         "Description": "After defeating the Dutch, Martanda Varma did something unprecedented. He performed 'Thrippadidanam', surrendering his kingdom and sword to Lord Padmanabhaswamy and ruling thereafter as a 'Padmanabha Dasa' (servant of the Lord). This act of humility ensured that the royal family saw themselves as trustees, not owners, of the people's wealth.",
-        "Modern Edge": "The lesson is the Power of Humility. By moving from 'Owner' to 'Servant,' Martanda Varma gained the total trust of his people. If you want people to follow you, stop acting like you are above them and start acting like you are working for them."
+        "Modern Edge": "The lesson is The Power of Humility. By moving from 'Owner' to 'Servant,' Martanda Varma gained the total trust of his people. If you want people to follow you, stop acting like you are above them and start acting like you are working for them."
       },
       {
         "Title": "The Battle of Sakharkherda",
@@ -406,7 +407,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "Central",
         "Summary": "The establishment of the Nizam's independence in the Deccan.",
         "Description": "In 1724, Nizam-ul-Mulk fought against the Mughal-backed Mubariz Khan. This battle marked the end of direct Mughal control over the Deccan and the birth of the Hyderabad State. It showed how the fragmentation of the central Mughal power led to the rise of powerful regional identities and military structures.",
-        "Modern Edge": "The lesson is knowing when to Stand Alone. When the central authority was fading, the Nizam didn't sink with the ship; he established his own ground. Learn to recognize when a system is failing so you can build your own path before it collapses."
+        "Modern Edge": "The lesson is Knowing When to Stand Alone. When the central authority was fading, the Nizam didn't sink with the ship; he established his own ground. Learn to recognize when a system is failing so you can build your own path before it collapses."
       },
       {
         "Title": "The Battle of Rakshas Tangadi (Talikota)",
@@ -420,9 +421,9 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Tantya Bhil: The Indian Robin Hood",
         "Category": "Forgotten Heroes",
         "Region": "Central",
-        "Summary": "The tribal revolutionary who fed the hungry.",
+        "Summary": "The tribal outlaw who looted British treasuries and fed the starving for 12 years.",
         "Description": "Tantya Bhil was a legendary figure in Madhya Pradesh who fought British exploitation for 12 years. He would loot the British treasuries and distribute the grain and money among the poor tribes. He was so popular that the British had to use an army of spies to finally capture him, as no local person would betray him.",
-        "Modern Edge": "The lesson is the Protection of the People. Tantya lived for others, and in return, they became his shield. If your life adds value to the people around you, you will never be truly alone in your struggles."
+        "Modern Edge": "The lesson is The Protection of the People. Tantya lived for others, and in return, they became his shield. If your life adds value to the people around you, you will never be truly alone in your struggles."
       },
       {
         "Title": "Jhalkari Bai: The Shadow of the Rani",
@@ -452,7 +453,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Vishwakarma: The Architect of the Gods",
         "Category": "Ancient Science",
         "Region": "North",
-        "Summary": "The legendary engineer of ancient Indian cities.",
+        "Summary": "The ancient engineering tradition that gave India Vastu Shastra and the Lost Wax casting method.",
         "Description": "In Indian tradition, Vishwakarma is the divine engineer. Historically, the 'Vishwakarma' community developed the Vastu Shastra—a sophisticated system of civil engineering and architecture. They mastered the science of acoustics, town planning, and the 'Lost Wax' casting method used to create the world's most detailed bronze icons.",
         "Modern Edge": "The lesson is Harmony with Environment. We often try to force our lives into shapes that do not fit. Vishwakarma teaches that if you build your life in alignment with natural laws and balance, your peace will be structural and lasting, not just a temporary decoration."
       },
@@ -469,7 +470,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Scholars",
         "Region": "North",
         "Summary": "The philosopher who decoded the science of emotions.",
-        "Description": "A polymath from Kashmir, Abhinavagupta wrote the 'Abhinavabharati'. He developed the 'Rasa' theory, explaining how art, music, and drama evoke specific emotional states in the human mind. His work is the foundation of Indian classical dance and music theory.",
+        "Description": "Abhinavagupta of Kashmir was one of the most versatile intellects of the ancient world. In his 'Abhinavabharati'—a commentary on Bharata's Natyashastra—he expanded the Rasa theory of aesthetics, explaining precisely how a skilled performance transforms personal emotion into a universal, shared feeling in the audience. He identified nine distinct Rasas, from love to terror to peace, and mapped how art creates states of mind that transcend ordinary experience. His philosophical system also encompassed Tantric thought, theology, and mysticism. He is the reason Indian classical dance and music still operate on a theory of emotional transmission rather than mere technical performance.",
         "Modern Edge": "The lesson is Emotional Awareness. Life is a series of Rasas—joy, fear, anger, and peace. Abhinavagupta teaches that you are not your emotions; you are the observer of them. Once you understand the science of your feelings, you can experience the beauty of life without being drowned by its drama."
       },
       {
@@ -492,7 +493,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Battle of Pullalur",
         "Category": "Battles",
         "Region": "South",
-        "Summary": "The victory of the Pallavas over the Chalukyas.",
+        "Summary": "The battle where the Pallavas saved their capital and sparked a centuries-long civilisational rivalry.",
         "Description": "King Mahendravarman I of the Pallava dynasty faced a massive invasion by the Chalukya king Pulakeshin II. At Pullalur, the Pallavas fought a defensive masterpiece that saved their capital, Kanchipuram. This battle sparked a centuries-long rivalry that defined the culture and politics of Southern India.",
         "Modern Edge": "The lesson is Protecting Your Peace. Some things are non-negotiable. Your core values and your mental health are your capital city. When external pressures invade, you must draw a line. Defending your boundaries is the first step toward a personal golden age."
       },
@@ -500,7 +501,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Sarkhel Kanhoji Angre’s Fortress",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "The unconquerable island of Khanderi.",
+        "Summary": "The admiral who turned shallow coastal waters into a graveyard for European warships.",
         "Description": "Kanhoji Angre fortified the island of Khanderi just off the coast of Mumbai. The British and Portuguese tried multiple times to capture it with their superior warships, but Angre's small, fast 'Gallivats' used the shallow waters and rocky coast to wreck the enemy ships, maintaining Indian control over the waters.",
         "Modern Edge": "The lesson is Self-Reliance. Kanhoji didn't have the big ships of the Europeans, so he mastered the environment they feared. You don't need fancy tools to succeed; you just need to master the unique gifts you already have."
       },
@@ -508,24 +509,24 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Courage of Onake Obavva",
         "Category": "Forgotten Heroes",
         "Region": "South",
-        "Summary": "The woman who defended a fort with a pestle.",
-        "Description": "When the forces of Hyder Ali tried to sneak into the Chitradurga Fort through a narrow hole, Obavva saw them. While her husband was at lunch, she took a wooden pestle (Onake) and killed the soldiers one by one as they emerged from the hole, saving the fort until the guards were alerted.",
+        "Summary": "The ordinary woman who single-handedly held a fort against an army—with a kitchen pestle.",
+        "Description": "Onake Obavva was the wife of a guard stationed at the Chitradurga Fort in Karnataka. While her husband took his midday break, she noticed enemy soldiers squeezing one by one through a narrow gap in the fort wall—a secret passage Hyder Ali's forces had discovered. She had no weapon except the heavy wooden pestle (Onake) she used to pound grain. She stood at the mouth of the gap and killed each soldier as he emerged—one at a time, in silence—until her husband returned and raised the alarm. She died from exhaustion and the effort of the fight. The entire garrison was saved by a single woman with a kitchen tool. The breach in the wall at Chitradurga is still called 'Onake Obavva Kindi'—Obavva's Hole.",
         "Modern Edge": "The lesson is Individual Agency. Obavva didn't wait for the army or even her husband. She saw a problem and fixed it with what she had in her hand. Never underestimate your power to change a situation just because you feel small or unsupported."
       },
       {
         "Title": "Vasudev Balwant Phadke: The Father of Armed Rebellion",
         "Category": "Freedom Fighters",
         "Region": "West",
-        "Summary": "The clerk who left his job to start a revolution.",
-        "Description": "Moved by the plight of farmers during the famine, Phadke formed a revolutionary group of Ramoshis and Dhangars. He led raids against British communications and treasuries in Maharashtra, aiming to establish an Indian Republic. He was the first to use organized guerrilla warfare against the British in the 19th century.",
+        "Summary": "The government clerk who quit his job to launch India's first armed uprising.",
+        "Description": "Vasudev Balwant Phadke was a junior government clerk in Pune who, in 1857, had been denied leave to visit his dying mother by his British superiors. That moment of cold indifference crystallized a fury that had been building for years. In 1879, moved by the devastation of the Deccan famine and the sight of starving farmers, he quit his post, formed a revolutionary army of Ramoshi and Dhangar tribesmen, and launched the first organized armed uprising against the British after 1857. He funded his rebellion by looting British government treasuries and redistributing the wealth to the poor, decades before Bhagat Singh. He was captured, sentenced to transportation for life, and died in Aden prison—but his blueprint of armed resistance inspired every revolutionary who came after him.",
         "Modern Edge": "The lesson is Courage of Conviction. Phadke left the safety of a stable life because his heart couldn't ignore the suffering of others. Living a meaningful life often requires stepping out of your comfort zone to stand up for what is right."
       },
       {
         "Title": "Tirupur Kumaran: Kodi Kaatha Kumaran",
         "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The man who died holding the flag aloft.",
-        "Description": "During a protest against the British in 1932, Kumaran was brutally assaulted by the police. Even as he fell unconscious and eventually died from his injuries, he refused to let the Indian National Flag touch the ground. He is remembered in Tamil Nadu as the hero who 'protected the flag'.",
+        "Summary": "The Tamil protester who bled out in the street in 1932 refusing to let the flag touch the ground.",
+        "Description": "Tirupur Kumaran was a young freedom fighter in Tamil Nadu who led a procession of the Desh Bandhu Youth Association through Tirupur on January 11, 1932, demanding independence. When British police charged the march and began beating the protesters, the flag-bearers fell one by one. Kumaran took the Tricolor and held it above his head as the lathis fell. He was beaten unconscious, his skull fractured—but even as he lost consciousness, his grip on the flagpole did not release. He died of his injuries without ever letting the flag touch the street. He was 28 years old. The image of a man killed mid-protest with the flag still raised in his lifeless hands became one of the defining symbols of Tamil resistance during the Civil Disobedience Movement.",
         "Modern Edge": "The lesson is Devotion to a Higher Cause. Kumaran’s physical body failed, but his spirit stayed upright through his commitment to the flag. When you live for something bigger than yourself, you find a strength that even physical pain cannot break."
       },
       {
@@ -540,7 +541,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Lagadha: The Father of Indian Astronomy",
         "Category": "Ancient Science",
         "Region": "North",
-        "Summary": "The sage who authored the Vedanga Jyotisha.",
+        "Summary": "The sage who mapped the stars to predict harvests and rituals 3,200 years ago.",
         "Description": "Lagadha was one of the first to systematize astronomy to determine the timing for Vedic rituals. He calculated the solstices and the lunar cycles with high accuracy around 1200 BCE. His work laid the foundation for the 'Panchang' system that Indians use to this day to understand the movements of celestial bodies.",
         "Modern Edge": "The lesson is Patience and Timing. Everything in the universe has a rhythm. If you are struggling, it might just be that the season isn't right. Learn to watch the cycles of your own life with the same patience Lagadha watched the stars."
       },
@@ -548,7 +549,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Lion of Gondwana: Raja Bakht Buland Shah",
         "Category": "Rulers",
         "Region": "Central",
-        "Summary": "The ruler who founded the city of Nagpur.",
+        "Summary": "The Gond king who turned scattered villages into the thriving city of Nagpur.",
         "Description": "Bakht Buland Shah was a visionary Gond ruler who transformed a series of small villages into the thriving city of Nagpur. He invited craftsmen, merchants, and farmers from all over India to settle in his kingdom, creating a multicultural hub of trade and agriculture that remains one of India's most important cities today.",
         "Modern Edge": "The lesson is Inclusivity. A great life isn't built in isolation. Bakht Buland Shah created greatness by welcoming others and creating space for them to thrive. Your own growth is often tied to how much you help those around you grow."
       },
@@ -564,8 +565,8 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Battle of Bhadli",
         "Category": "Battles",
         "Region": "West",
-        "Summary": "The final stand of the Jethwa clan.",
-        "Description": "This battle represents the fierce internal rivalries and external pressures of the Saurashtra region. It highlights the 'Paaliyas' (hero stones) culture of Gujarat, where warriors fought to protect their villages and cattle, proving that valor was not just for emperors but for every village chieftain.",
+        "Summary": "The Rajput clan whose last stand gave Gujarat the 'Paaliya'—a stone that honours every nameless hero.",
+        "Description": "In the Saurashtra region of Gujarat, the Jethwa Rajput clan fought a desperate last stand against overwhelming odds to protect their ancestral territory. This battle exemplifies the 'Paaliya' (hero stone) culture of Gujarat — where communities erected memorial stones for warriors who died defending their villages, cattle, and honor. It is a testament to the truth that courage was never the exclusive domain of emperors; every village chieftain and common warrior carried the same fire of resistance.",
         "Modern Edge": "The lesson is Ordinary Heroism. You don't need a crown to be a hero. Protecting your home, your family, and your small community is as noble as leading an empire. Valor is found in the everyday choice to protect what you love."
       },
       {
@@ -580,7 +581,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The 1200 Architects of Konark",
         "Category": "Forgotten Heroes",
         "Region": "East",
-        "Summary": "The anonymous masters who built the Sun Temple.",
+        "Summary": "The 1,200 craftsmen whose master's son jumped into the sea so they wouldn't face the king's wrath.",
         "Description": "The Sun Temple at Konark was built by 1,200 craftsmen over 12 years. The legend of Dharmapada tells of the chief architect's son who completed the temple's crown when the masters failed. To save the reputation of the 1,200 workers from the King's wrath, the boy jumped into the sea, sacrificing himself for his community.",
         "Modern Edge": "The lesson is Selfless Contribution. Dharmapada didn't finish the temple for fame; he did it to save his people. Sometimes, the most important work you do will be anonymous, done simply because it needed to be finished and because you cared for your community."
       },
@@ -598,7 +599,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "East",
         "Summary": "The king who made India the global center of learning.",
         "Description": "Emperor Dharmapala of the Pala Dynasty revived Nalanda and founded Vikramshila University. Under his patronage, these centers housed 10,000 students and 2,000 teachers from across Asia. They taught everything from logic and grammar to medicine and star-mapping, preserving the world's knowledge in 'Dharmaganja', the massive nine-story library.",
-        "Modern Edge": "The lesson is the Power of Mind. Dharmapala knew that a kingdom's true strength isn't in its swords, but in its knowledge. Invest in your own mind; it is the only asset that no one can ever take from you and that grows the more you share it."
+        "Modern Edge": "The lesson is The Power of Mind. Dharmapala knew that a kingdom's true strength isn't in its swords, but in its knowledge. Invest in your own mind; it is the only asset that no one can ever take from you and that grows the more you share it."
       },
       {
         "Title": "Atisa Dipamkara: The Light of Asia",
@@ -612,7 +613,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Hemachandracharya: The Omniscient",
         "Category": "Scholars",
         "Region": "West",
-        "Summary": "The 12th-century polymath of Gujarat.",
+        "Summary": "The Jain scholar who described the Fibonacci sequence 50 years before Fibonacci was born.",
         "Description": "A scholar in the court of Kumarapala, Hemachandracharya wrote the 'Siddha-Hema-Shabdanushasana', a comprehensive grammar. He was a master of logic, mathematics, and history. He is credited with describing the 'Fibonacci' sequence patterns in Sanskrit poetry long before Leonardo Fibonacci was born in Italy.",
         "Modern Edge": "The lesson is Curiosity. Hemachandracharya saw patterns in poetry that were actually math. If you keep your mind open, you will find beauty and logic in the most unexpected places. Life is full of secrets waiting for a curious heart."
       },
@@ -662,7 +663,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "Central",
         "Summary": "The tribal woman who protected the sacred groves.",
         "Description": "In the tribal belts of Central India, oral traditions tell of Vandevi, who organized forest dwellers to protect their sacred 'Sarnas' from being cut down for colonial timber. She taught her people that the forest was not a resource to be sold, but a parent to be protected, predating the modern Chipko movement by centuries.",
-        "Modern Edge": "The lesson is the Sanctity of Foundations. Vandevi teaches us that some things are too sacred to be traded for temporary gain. If you compromise your core values or your environment for a quick 'win,' you invite total collapse. Protect your 'Sacred Grove'—the principles that sustain you—to ensure a meaningful future."
+        "Modern Edge": "The lesson is The Sanctity of Foundations. Vandevi teaches us that some things are too sacred to be traded for temporary gain. If you compromise your core values or your environment for a quick 'win,' you invite total collapse. Protect your 'Sacred Grove'—the principles that sustain you—to ensure a meaningful future."
       },
       {
         "Title": "Sawai Jai Singh II and Jantar Mantar",
@@ -678,7 +679,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "South",
         "Summary": "The invention that birthed modern rocket science.",
         "Description": "During the Anglo-Mysore Wars, Hyder Ali and Tipu Sultan developed the first iron-cased rockets. Unlike the bamboo rockets used in China, the iron casing allowed for higher internal pressure and longer ranges (up to 2km). After the wars, the British took these rockets to England to develop the Congreve rocket, directly influencing modern missile technology.",
-        "Modern Edge": "The lesson is the Power of the Container. Hyder Ali took an old idea and changed the 'containment.' In your life, the 'material' of your character matters. By strengthening your internal discipline (the iron casing), you can handle much higher pressure and reach goals that were previously impossible."
+        "Modern Edge": "The lesson is The Power of the Container. Hyder Ali took an old idea and changed the 'containment.' In your life, the 'material' of your character matters. By strengthening your internal discipline (the iron casing), you can handle much higher pressure and reach goals that were previously impossible."
       },
       {
         "Title": "The Sangam Scholars and the First Academy",
@@ -716,7 +717,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Battle of Merta",
         "Category": "Battles",
         "Region": "West",
-        "Summary": "A display of unmatched cavalry bravery.",
+        "Summary": "The Rajput death-charge that made French generals stop and salute the enemy.",
         "Description": "In 1790, the Maratha forces under De Boigne faced the Rathore cavalry of Jodhpur. The Rathores performed a legendary 'death charge', riding straight into the mouth of modern artillery. Though they lost due to the technological gap, their bravery was so immense that the French generals in the Maratha camp saluted them in respect.",
         "Modern Edge": "The lesson is Balancing Heart with Reality. Bravery is admirable, but it cannot overcome a fundamental lack of preparation or tools. This story reminds us to respect our traditions and spirit, but also to stay aware of how the world is changing so that our efforts are not in vain."
       },
@@ -761,19 +762,19 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Nurturing the Source. Sarangadhara knew that if you treat the internal health of a living thing, it will flourish beyond expectations. Apply this to your own growth: focus on your 'roots'—your health and mindset—to produce results that seem 'impossible' to others."
       },
       {
-        "Title": "The Strategic Peace of Rani Abakka Chowta",
-        "Category": "Rulers",
+        "Title": "V.O. Chidambaram Pillai: The Swadeshi Helmsman",
+        "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The Queen of Ullal who defeated the Portuguese for 40 years.",
-        "Description": "Rani Abakka was the last Tuluva Queen of Ullal. She was a master of diplomacy and naval warfare. For four decades, she repelled Portuguese attacks on her port. She utilized a diverse army of Hindus and Muslims, including the famous 'Mapilla' archers, proving that communal unity was the key to defending India's coastline.",
-        "Modern Edge": "The lesson is Strength in Diversity. Rani Abakka built an 'un-hackable' defense by uniting people from different backgrounds under one goal. It teaches us that a diverse group of thinkers and specialists is much more resilient than a uniform one. Unity is your best shield."
+        "Summary": "The visionary who launched India’s first indigenous shipping company to shatter the British maritime monopoly.",
+        "Description": "While many freedom fighters focused on political protests, V.O. Chidambaram Pillai (VOC) understood that the true backbone of the British Empire was its economic monopoly. In 1906, he launched the Swadeshi Steam Navigation Company, directly challenging the British India Steam Navigation Company's total control over the lucrative India-Ceylon trade route. VOC raised massive capital from the Indian public to purchase two massive steamships, the 'S.S. Gallia' and 'S.S. Lavo'. The British retaliated with ruthless price wars, eventually offering free rides to passengers, but VOC’s ships stayed afloat on national pride. Recognizing him as a severe economic threat, the British charged him with sedition and sentenced him to brutal labor, famously forcing him to pull a heavy oil press like a bullock in prison. Though his company was eventually dismantled, VOC pioneered the concept of economic independence as a weapon.",
+        "Modern Edge": "The lesson is Disrupting the Monopoly. True power isn't just about protesting a broken system; it's about building a viable alternative that competes directly with it. VOC proved that hitting a giant in their wallet is often more terrifying to them than any speech. To change the game, you have to build your own infrastructure."
       },
       {
         "Title": "Zamorin of Calicut and the Kunjali Marakkars",
         "Category": "Rulers",
         "Region": "South",
         "Summary": "The legendary naval admirals of the Malabar coast.",
-        "Description": "The Kunjali Marakkars were the hereditary admirals of the Hindu Zamorin of Calicut. They fought a relentless 100-year naval war against the Portuguese. They were the first to use heavy cannon on small, fast ships, successfully challenging the European monopoly over the Indian Ocean for generations.",
+        "Description": "The Kunjali Marakkars were the hereditary naval commanders appointed by the Zamorin of Calicut to defend the Malabar coast against the Portuguese Empire. Across four generations and nearly a century, they conducted one of the most sustained anti-colonial naval campaigns in pre-modern history. They innovated by mounting heavy cannon on small, fast vessels—a combination of firepower and mobility that let them attack Portuguese carracks and escape before a counterattack could form. The Portuguese, unable to defeat them militarily, eventually persuaded the Zamorin to betray the fourth Kunjali Marakkar through political manipulation. He was captured in 1600 and executed in Goa. His betrayal by the very ruler he had protected for decades is one of the starkest lessons in the cost of internal division.",
         "Modern Edge": "The lesson is Speed beats Bulk. The Marakkars showed that being small and agile with 'heavy' intent is better than being huge and slow. In life, don't worry about being 'big'; focus on being fast and having a clear, powerful purpose. Small moves can topple giants."
       },
       {
@@ -782,7 +783,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "21 Sikh soldiers against 10,000 Afghan tribesmen.",
         "Description": "In 1897, 21 soldiers of the 36th Sikhs defended a signaling post at Saragarhi. Facing an onslaught of 10,000 Afghans, they refused to surrender or retreat. They fought for over seven hours, killing hundreds of the enemy, until the very last man fell. Their sacrifice gave the main fort enough time to prepare for the defense.",
-        "Modern Edge": "The lesson is the Duty of the Few. Sometimes, a small group must bear a heavy load to save the whole system. This story reminds us that your individual stand matters. Even if you feel outnumbered, your persistence gives others the time they need to succeed."
+        "Modern Edge": "The lesson is The Duty of the Few. Sometimes, a small group must bear a heavy load to save the whole system. This story reminds us that your individual stand matters. Even if you feel outnumbered, your persistence gives others the time they need to succeed."
       },
       {
         "Title": "The Battle of Kamrup",
@@ -814,7 +815,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "South",
         "Summary": "Puli Thevar: The first to refuse tax to the British.",
         "Description": "In 1755, decades before the 1857 mutiny, Puli Thevar of Nellai refused to pay taxes to the British East India Company. He formed a coalition of local chieftains and defeated the British and Nawab forces in several encounters, marking the earliest organized armed resistance to colonial rule in India.",
-        "Modern Edge": "The lesson is the Courage to Opt-Out. Puli Thevar was the first to say 'No' to an unfair system. It teaches us that breaking the aura of an 'unbeatable' force starts with one small player standing up. Once the fear is gone, others will follow your lead."
+        "Modern Edge": "The lesson is The Courage to Opt-Out. Puli Thevar was the first to say 'No' to an unfair system. It teaches us that breaking the aura of an 'unbeatable' force starts with one small player standing up. Once the fear is gone, others will follow your lead."
       },
       {
         "Title": "The Vastu Shastra of Maya Danava",
@@ -844,9 +845,9 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Rani Rudrama Devi: The King-Queen",
         "Category": "Rulers",
         "Region": "South",
-        "Summary": "The Kakatiya ruler who dressed as a man to save her kingdom.",
+        "Summary": "The warrior queen who ruled openly as king—and earned the praise of Marco Polo.",
         "Description": "One of the few female monarchs in Indian history, Rudrama Devi was formally designated as a son through a ritual. She led her armies into battle, completed the massive Warangal Fort, and repelled the Yadavas and Cholas. Marco Polo, the Italian traveler, visited her kingdom and praised her as a lady of high intelligence and justice.",
-        "Modern Edge": "The lesson is Authenticity through Action. Rudrama Devi didn't let social expectations stop her from leading. In the end, it was her results (the Warangal Fort) that earned respect. Don't worry about 'fitting in'; focus on your results, and the world will adjust its expectations."
+        "Modern Edge": "The lesson is Authenticity through Action. Rudrama Devi didn't debate her right to lead—she led. She built the Warangal Fort, repelled enemies, and earned the admiration of Marco Polo through results alone. Stop asking the world for permission to be who you are, and start producing work so undeniable that the world adjusts its expectations around you."
       },
       {
         "Title": "Prataparudra Deva and the Gajapati Might",
@@ -860,7 +861,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Vikramaditya VI: The Chalukya-Vikrama Era",
         "Category": "Rulers",
         "Region": "South",
-        "Summary": "The king who started his own calendar.",
+        "Summary": "The Chalukya king who reset time itself—abolishing the old era and starting his own.",
         "Description": "A powerful ruler of the Western Chalukyas, Vikramaditya VI abolished the old Shaka era and started the 'Vikrama-Chalukya era'. His reign was a golden age for Kannada and Sanskrit literature. He was known for his massive temple-building projects and for maintaining a peaceful empire for over 50 years.",
         "Modern Edge": "The lesson is Defining Your Own Time. Vikramaditya didn't just follow the old clock; he started his own era. It reminds us that you have the power to reset your own life 'calendar.' Stop living by other people's timelines and start your own era of growth."
       },
@@ -878,13 +879,13 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "Raja Suheldev’s stand against the Ghaznavid invasion.",
         "Description": "When Salar Masud, nephew of Mahmud of Ghazni, invaded with a massive army, Raja Suheldev of Shravasti united the local chieftains. At the Battle of Bahraich in 1033 CE, the invading army was completely annihilated. This victory was so decisive that no major foreign invasion from the North-West occurred for the next 150 years.",
-        "Modern Edge": "The lesson is the Power of Decisive Action. Suheldev teaches us that when you face a threat, a halfway defense is not enough. By addressing a problem with total focus and strength, you don't just solve it for today—you create a boundary of peace and respect that lasts for generations."
+        "Modern Edge": "The lesson is The Power of Decisive Action. Suheldev teaches us that when you face a threat, a halfway defense is not enough. By addressing a problem with total focus and strength, you don't just solve it for today—you create a boundary of peace and respect that lasts for generations."
       },
       {
         "Title": "The Sacrifice of 363 Bishnois",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "Amrita Devi and the first environmental protest.",
+        "Summary": "The woman who hugged a tree and said 'a chopped head is cheaper'—and 362 others died beside her.",
         "Description": "In 1730, when the King of Jodhpur sent soldiers to cut Khejri trees for a new palace, Amrita Devi Bishnoi hugged the trees to protect them. She said, 'A chopped head is cheaper than a felled tree.' She and 362 others sacrificed their lives, eventually forcing the King to pass a permanent decree protecting the trees and wildlife.",
         "Modern Edge": "The lesson is Radical Integrity. The Bishnois proved that some values are more important than personal survival. In a world that often asks you to compromise your principles for comfort, remember that standing by your truth—even at a great cost—is the only way to create lasting change."
       },
@@ -908,7 +909,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Architecture of the Vakatakas",
         "Category": "Scholars",
         "Region": "Central",
-        "Summary": "The dynasty that patronized the Ajanta Caves.",
+        "Summary": "The dynasty whose artists used mineral pigments so pure that the Ajanta frescoes still glow 1,500 years later.",
         "Description": "The Vakatakas were the contemporaries of the Guptas. Under Queen Prabhavatigupta (daughter of Chandragupta II), they created the world-famous rock-cut Buddhist viharas and chaityas at Ajanta. Their scholars preserved the techniques of 'fresco' painting, using natural minerals to create colors that remain vibrant even after 1,500 years.",
         "Modern Edge": "The lesson is Substance over Hype. The Vakatakas didn't use cheap, flashy materials; they used deep, natural minerals. If you want your personal legacy or work to remain vibrant for a lifetime, invest in 'mineral-grade' quality—depth, honesty, and hard work—rather than temporary trends that fade in the sun."
       },
@@ -916,7 +917,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Dhanvantari: The God of Ayurveda",
         "Category": "Ancient Science",
         "Region": "North",
-        "Summary": "The legendary surgeon of the early Vedic era.",
+        "Summary": "The ancient physician who taught that surgery is only valid when the body's internal balance cannot be restored.",
         "Description": "Dhanvantari is regarded as the father of Indian medicine. Historically, his lineage of scholars perfected the use of salt as an antiseptic and leeches for blood purification. He taught that surgery should only be performed when the body’s internal 'Doshic' balance could not be restored through herbs and diet.",
         "Modern Edge": "The lesson is Preventative Care. Dhanvantari viewed extreme measures as a last resort. In your daily life, fix the 'imbalances'—your stress, your habits, and your relationships—with small, consistent changes. Don't wait until a crisis forces you to make a painful 'amputation' in your life."
       },
@@ -924,7 +925,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Suhungmung: The Architect of Greater Assam",
         "Category": "Rulers",
         "Region": "East",
-        "Summary": "The Ahom king who modernized the administration.",
+        "Summary": "The Ahom king who gave different tribes a single shared identity—and armed them all with firearms.",
         "Description": "Suhungmung was one of the most important Ahom kings. He was the first to adopt a Hindu title (Swarganarayana) and expanded the kingdom to include various local tribes, creating a unified Assamese identity. He introduced the use of firearms in the Ahom army, which later became the backbone of their resistance against the Mughals.",
         "Modern Edge": "The lesson is Inclusive Growth. Suhungmung didn't just conquer; he integrated. He took different groups and gave them a shared identity and better tools. To build a great life or community, bring people together and help them upgrade their skills immediately. Unity and progress must go hand-in-hand."
       },
@@ -948,7 +949,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Siege of Gingee Fort",
         "Category": "Battles",
         "Region": "South",
-        "Summary": "The 'Troy of the East' that stood for 8 years.",
+        "Summary": "The three-hill fort that forced the entire Mughal empire to besiege it for 8 years before it fell.",
         "Description": "Gingee Fort in Tamil Nadu was so well-fortified that the Mughal army had to siege it for eight years to capture it from the Marathas. Its unique three-hill structure and sophisticated water supply system allowed a small garrison to defy an empire, proving the superiority of Indian hill-fort engineering.",
         "Modern Edge": "The lesson is Resilience through Redundancy. Gingee wasn't just one peak; it was three hills sharing one system. In your own life, don't rely on just one source of strength or joy. By having 'three hills'—perhaps your family, your passions, and your inner faith—you can survive a long 'siege' of hardship."
       },
@@ -973,15 +974,15 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "West",
         "Summary": "The Chhatrapati who empowered the Peshwas and expanded the Maratha Empire.",
-        "Description": "Chhatrapati Shahu, grandson of Shivaji Maharaj, was instrumental in transforming the Maratha state into a pan-Indian empire. He had the vision to recognize the talent of Balaji Vishwanath and Bajirao I, delegating authority to capable leaders while maintaining the central pillar of the Maratha identity. Under his reign, the Maratha flag reached from Cuttack to Attock.",
-        "Modern Edge": "The lesson is the Power of Delegation. Shahu Maharaj realized that he didn't need to do everything himself to be a great leader. He found talented people and gave them the freedom to act. In your life, learn to trust others and empower them. You achieve more when you stop trying to 'operate' and start supporting talent."
+        "Description": "Chhatrapati Shahu spent nearly 18 years as a prisoner of Aurangzeb's court—captured as a child after his father Sambhaji's execution. The Mughals hoped captivity would break the Maratha spirit by removing its heir. Instead, Shahu emerged from imprisonment with a sophisticated understanding of Mughal statecraft, court politics, and administrative systems that no Maratha king had possessed before him. When released in 1707 after Aurangzeb's death, he walked back into a Maratha confederacy torn apart by rival claimants and immediately began the careful, patient work of reunification—not by force, but by granting jagirs, titles, and measured trust to the very commanders who had been fighting each other. He recognized that the Maratha Empire's next phase required a different kind of king: not a warrior, but an architect. His most consequential act was institutionalizing the Peshwa system under Balaji Vishwanath—giving a capable administrator constitutional authority to command the military while Shahu remained the moral sovereign. It was a structural innovation that would drive Maratha expansion for the next 50 years.",
+        "Modern Edge": "The lesson is The Power of Delegation. Shahu Maharaj realized that he didn't need to do everything himself to be a great leader. He found talented people and gave them the freedom to act. In your life, learn to trust others and empower them. You achieve more when you stop trying to 'operate' and start supporting talent."
       },
       {
         "Title": "Rao Jodha and the Creation of Mehrangarh",
         "Category": "Rulers",
         "Region": "West",
         "Summary": "The founder of Jodhpur and the invincible 'Citadel of the Sun'.",
-        "Description": "Rao Jodha moved his capital to a 400-foot high cliff to ensure better defense. He built the Mehrangarh Fort, an engineering marvel with walls so thick that they remained unscathed by heavy cannon fire. His strategic shift ensured the survival and prosperity of the Rathore clan for centuries.",
+        "Description": "Rao Jodha, founder of Jodhpur, made one of the most decisive strategic decisions in Rajput history. In 1459, he abandoned the vulnerable plains and moved his capital to a 400-foot-high volcanic rock outcrop, building the Mehrangarh Fort—whose walls at their base are up to 36 feet thick, making them effectively cannon-proof for the technology of the era. The fort was designed so that every gate was angled to prevent elephant charges and every wall had positions for archers to cover blind spots below. He founded the city of Jodhpur at the foot of the fort to feed and sustain it. Mehrangarh was never breached by any enemy in its entire history. By moving the clan's seat of power to high ground before a crisis forced him to, Rao Jodha gave the Rathore dynasty a fortress that outlasted empires.",
         "Modern Edge": "The lesson is Seeking the High Ground. When life feels too chaotic or 'noisy,' move your focus to a higher plane. Rao Jodha teaches us to step away from the distractions and 'plains' of mediocrity to build our character where the 'cannon fire' of daily life cannot reach us."
       },
       {
@@ -993,18 +994,18 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Finding Depth in Dry Seasons. When life feels 'dry' and resources are low, don't look across the surface; look deeper within. By 'drilling down' into your own resilience and using a structured, disciplined approach, you can find the 'groundwater' that keeps you cool and steady."
       },
       {
-        "Title": "Savithribai Phule: The Pioneer of Education",
+        "Title": "Savitribai Phule: The Pioneer of Education",
         "Category": "Scholars",
         "Region": "West",
         "Summary": "The first female teacher of India who fought social stigma.",
-        "Description": "Savithribai, along with her husband Jyotirao Phule, opened the first school for girls in Pune in 1848. Despite people throwing mud and stones at her while she walked to school, she carried a second sari and continued teaching. She broke the monopoly of knowledge and paved the way for modern Indian women's education.",
-        "Modern Edge": "The lesson is Practical Persistence. Savithribai knew people would 'throw mud' at her for doing the right thing, so she simply carried a spare sari. When you are trying to do good, expect criticism. Don't let it stop you—just have a 'backup' plan to clean yourself up and keep going."
+        "Description": "Savitribai, along with her husband Jyotirao Phule, opened the first school for girls in Pune in 1848. Despite people throwing mud and stones at her while she walked to school, she carried a second sari and continued teaching. She broke the monopoly of knowledge and paved the way for modern Indian women's education.",
+        "Modern Edge": "The lesson is Practical Persistence. Savitribai knew people would 'throw mud' at her for doing the right thing, so she simply carried a spare sari. When you are trying to do good, expect criticism. Don't let it stop you—just have a 'backup' plan to clean yourself up and keep going."
       },
       {
         "Title": "The Battle of Palkhed",
         "Category": "Battles",
         "Region": "West",
-        "Summary": "Bajirao I's masterclass in mobile warfare.",
+        "Summary": "The Peshwa who won without a pitched battle—by cutting the enemy's water and starving them out.",
         "Description": "In 1728, Peshwa Bajirao I faced the Nizam of Hyderabad. Instead of a direct clash, Bajirao used lightning-fast cavalry movements to cut off the Nizam's supplies and artillery. He forced the superior Mughal-style army into a waterless region, compelling the Nizam to surrender without a major bloodshed. It is studied globally as a masterpiece of strategic maneuvering.",
         "Modern Edge": "The lesson is Agility over Force. You don't always have to face a giant problem head-on. Bajirao shows us that by being fast and cutting off the 'fuel' that feeds a conflict, you can win without unnecessary struggle. Use your speed and wits to lead your problems into a place where they lose their power."
       },
@@ -1021,8 +1022,8 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Forgotten Heroes",
         "Region": "West",
         "Summary": "The Queen who sacrificed her life to send her husband to war.",
-        "Description": "When the newlywed Rao Ratan Singh hesitated to go to battle because of his love for his wife, Rani Hadi. To remove his distraction and remind him of his duty to the land, she cut off her own head and sent it to him as a 'souvenir.' Heartbroken but inspired, the Rao fought like a lion, securing the victory for his people.",
-        "Modern Edge": "The lesson is Removing Hesitation. While the story is extreme, it teaches that deep attachment can sometimes cloud our sense of duty. If your focus is divided, you cannot succeed. Identify what is distracting you from your highest path and have the courage to 'cut the cord' of that distraction."
+        "Description": "When the newly-wed Rao Ratan Singh hesitated to ride to battle—his heart bound to his new bride—Rani Hadi saw that a warrior with a divided heart is a defeated warrior before the first arrow flies. She sacrificed herself to cut the cord of his hesitation, sending him to his duty without chains of longing. Heartbroken but liberated from conflict, the Rao rode into battle with singular ferocity and secured the victory for his people and his land.",
+        "Modern Edge": "The lesson is Removing Divided Focus. Rani Hadi understood that a leader whose heart is split cannot serve fully. If an attachment is quietly pulling you away from your highest duty, have the honesty to recognize it and the courage to release it. Total commitment to your mission is not indifference—it is the deepest form of respect for what you are called to build."
       },
       {
         "Title": "Durgadas Rathore: The Unconquerable",
@@ -1100,9 +1101,9 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The 63 Martyrs of the Vedaranyam Salt March",
         "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The Southern response to the Dandi March.",
+        "Summary": "The 63 marchers who walked into the sea at Vedaranyam and were beaten down—but never turned back.",
         "Description": "Led by C. Rajagopalachari in 1930, hundreds marched from Trichy to Vedaranyam to break the salt law. Despite brutal police crackdowns and the British trying to hide all food and water along the route, local villagers risked their lives to feed the marchers, proving that the struggle for freedom was a truly pan-Indian heartbeat.",
-        "Modern Edge": "The lesson is the Strength of Community. This march only succeeded because the local villagers provided 'food and water' in a desert. In your own life, build a community that supports you. When the road is hard, it is the quiet support of friends and family that keeps you moving."
+        "Modern Edge": "The lesson is The Strength of Community. This march only succeeded because the local villagers provided 'food and water' in a desert. In your own life, build a community that supports you. When the road is hard, it is the quiet support of friends and family that keeps you moving."
       },
       {
         "Title": "The Architects of the Hampi Aqueducts",
@@ -1121,28 +1122,12 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Mobility of Truth. When external forces try to silence your voice or block your path, don't stay in one place to be captured by negativity. Keep your spirit moving and find unconventional ways to speak your truth. A dynamic mind can never be truly caged by a rigid authority."
       },
       {
-        "Title": "The Gond Queen Durgavati",
-        "Category": "Rulers",
-        "Region": "Central",
-        "Summary": "The defender of Garha Katanga against the Mughal expansion.",
-        "Description": "Rani Durgavati was a warrior queen who refused to surrender her kingdom to Akbar’s generals. She was a master of defensive warfare, using the hilly terrain of the Satpuras to trap larger armies. When she was finally cornered and wounded, she chose to end her own life with a dagger rather than face the dishonor of being a prisoner.",
-        "Modern Edge": "The lesson is Controlling your Narrative. Durgavati teaches us that even when external defeat is inevitable, you still have the power to control your dignity. Do not let others define your value or your ending; keep your inner sovereignty intact until the very last breath."
-      },
-      {
-        "Title": "Raja Martanda Varma and the Battle of Colachel",
-        "Category": "Battles",
-        "Region": "South",
-        "Summary": "The first time an Asian power defeated a European naval force.",
-        "Description": "In 1741, the Dutch East India Company attempted to invade Travancore. Martanda Varma's forces utilized a superior understanding of the coastline to trap the Dutch fleet. This victory was so total that it permanently ended Dutch colonial ambitions in the Indian subcontinent.",
-        "Modern Edge": "The lesson is Using Local Advantage. A giant problem is only powerful in its own territory. Martanda Varma shows us that by drawing a massive challenge into your 'shallows'—the areas you know best—you can ground the problem and finish it. Use your unique personal strengths to neutralize overwhelming odds."
-      },
-      {
         "Title": "The Iron-Smelting Tribes of Agaria",
         "Category": "Ancient Science",
         "Region": "Central",
         "Summary": "The traditional keepers of India's metallurgical secrets.",
         "Description": "The Agaria tribe in Central India practiced a form of small-scale iron smelting that produced rust-resistant iron for centuries. They understood the specific chemical properties of different clays used in their kilns, a tribal science that eventually contributed to the development of modern high-grade steel.",
-        "Modern Edge": "The lesson is the Value of Deep Secrets. You don't need a massive platform to be essential. By mastering one specific, 'rust-resistant' skill or piece of knowledge, you create a value that cannot be easily copied. Your 'micro-recipe' for excellence is your best defense against being replaced."
+        "Modern Edge": "The lesson is The Value of Deep Secrets. You don't need a massive platform to be essential. By mastering one specific, 'rust-resistant' skill or piece of knowledge, you create a value that cannot be easily copied. Your 'micro-recipe' for excellence is your best defense against being replaced."
       },
       {
         "Title": "Acharya Lalla and the Gnomon",
@@ -1156,24 +1141,24 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Bravehearts of the Vaikom Satyagraha",
         "Category": "Freedom Fighters",
         "Region": "South",
-        "Summary": "The peaceful struggle for the right to walk on public roads.",
-        "Description": "In 1924, people of all castes stood together in Vaikom, Kerala, to demand that the roads around the local temple be opened to everyone. Despite being arrested and standing in waist-deep water during the monsoon for months, they remained non-violent, forcing a change in the social fabric of India.",
+        "Summary": "Standing waist-deep in monsoon floods to demand the right to walk a public road.",
+        "Description": "In 1924, in Vaikom, Kerala, activists of all castes—Hindu, Muslim, and Christian—stood together to demand that the public roads surrounding the Vaikom Mahadeva Temple be opened to people of all communities, not just upper-caste Hindus. The protesters were arrested in waves; those who replaced them were also arrested. At one point, the British planted wooden stakes in the road and flooded the area, forcing protesters to stand in waist-deep monsoon water for months. They did not move. The movement eventually succeeded in getting the roads opened, and it became a template for Gandhi's own Satyagraha method. Mahatma Gandhi himself called the Vaikom Satyagraha one of the greatest nonviolent struggles in Indian history.",
         "Modern Edge": "The lesson is Moral Endurance. Vaikom teaches us that standing your ground through the 'monsoon' of hardship—without lashing out—eventually drains the power of the opposition. If you are in a difficult phase, remember that your persistence itself is a powerful force for change."
       },
       {
         "Title": "Kanaklata Barua: The Girl with the Flag",
         "Category": "Freedom Fighters",
         "Region": "East",
-        "Summary": "The 17-year-old martyr of the Quit India movement.",
-        "Description": "During the 1942 movement in Assam, Kanaklata led a group of protesters to hoist the national flag at a police station. When the British police threatened to fire, she stepped forward, refusing to let the flag fall. She was shot and died holding the flag, becoming a symbol of youth defiance in the East.",
-        "Modern Edge": "The lesson is Courage of Conviction. Kanaklata proved that age is irrelevant when it comes to standing up for what is right. When you believe in a cause, step forward without fear. One person’s refusal to let their 'flag' fall can inspire an entire generation to pick it up."
+        "Summary": "The 17-year-old from Assam who stepped into British gunfire so the flag wouldn't fall.",
+        "Description": "On September 20, 1942, during the Quit India Movement, Kanaklata Barua led the Mrityu Bahini (Death Squad) procession in Gohpur, Assam, with one mission: to hoist the Tricolor at the local police station. When British police warned the procession to stop and threatened to fire, every adult in the march hesitated. Kanaklata, all of 17 years old, stepped to the front, took the flag, and walked forward. She was shot dead, but kept the flag from touching the ground until the next person took it from her hands. She had never attended school, yet her act of courage became a lesson studied across generations.",
+        "Modern Edge": "The lesson is Stepping Forward First. Every crowd has a moment when it freezes. Kanaklata showed that the entire direction of that moment changes the instant one person decides not to. You do not need rank, experience, or permission to be that person. Be the one who takes the first step—because the first step is what everything else depends on."
       },
       {
         "Title": "Bhartrihari: The Grammarian Philosopher",
         "Category": "Scholars",
         "Region": "North",
-        "Summary": "The sage who linked language to consciousness.",
-        "Description": "Bhartrihari's 'Vakyapadiya' explored the idea that thought and language are inseparable. He proposed the 'Sphota' theory—that meaning is grasped in a sudden flash of insight. His work remains a foundational text in both linguistics and the philosophy of the mind.",
+        "Summary": "The philosopher who proved that thought and language are inseparable—and that meaning arrives in a flash.",
+        "Description": "Bhartrihari of Varanasi authored the 'Vakyapadiya'—one of the most sophisticated works in the history of linguistic philosophy. He argued that thought and language are fundamentally inseparable: you cannot think a thought you do not have the words for. He proposed the 'Sphota' theory—that when you hear a word, the meaning doesn't arrive piece by piece but in one sudden, complete flash of understanding. His work was studied by Mandana Misra, influenced Buddhist logic, and remains a foundational text in both Sanskrit grammar and the philosophy of consciousness over 1,400 years later.",
         "Modern Edge": "The lesson is Controlling the Inner Narrative. Bhartrihari teaches us that how we speak determines how we think. If you want to change your life, change your vocabulary. Master your 'inner language' to change the boundaries of what you believe is possible for yourself."
       },
       {
@@ -1185,7 +1170,7 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Flexibility as Strength. The Kacharis built pillars that could survive earthquakes by using interlocking designs rather than rigid ones. In your own life, don't be so rigid that you 'snap' under pressure. Build a flexible mindset and 'interlocking' support systems that can shake with the world and remain standing."
       },
       {
-        "Title": "Velu Nachiyar: The First Queen to use a Suicide Bomber",
+        "Title": "Velu Nachiyar: The First Indian Queen to Fight the British",
         "Category": "Freedom Fighters",
         "Region": "South",
         "Summary": "The Queen of Sivaganga who outsmarted the British.",
@@ -1196,7 +1181,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Maritime Strength of the Marwaris",
         "Category": "Rulers",
         "Region": "West",
-        "Summary": "The inland kings who dominated the Eastern trade routes.",
+        "Summary": "The desert merchants who built a financial empire that spanned oceans.",
         "Description": "While based in the deserts of Rajasthan, the Marwar merchant-kings and chieftains established 'Kothis' (trading posts) across the world. They financed the navies of other Indian kingdoms and controlled the movement of silk and spices, proving that economic power is a form of sovereignty that can rule across oceans even from a desert.",
         "Modern Edge": "The lesson is Transcending your Environment. You do not have to be defined by where you start. The Marwaris ruled the oceans from a desert. No matter how 'dry' your current situation is, you can still influence distant horizons if you build the right connections and manage your resources wisely."
       },
@@ -1205,7 +1190,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Ancient Science",
         "Region": "South",
         "Summary": "The 15th-century astronomer who refined the solar system model.",
-        "Description": "A giant of the Kerala School, Nilakantha wrote the 'Tantrasamgraha'. He proposed a partially heliocentric model where the planets orbit the Sun, which in turn orbits the Earth. This was a significant mathematical advancement that preceded the Tychonic system of Europe by nearly a century.",
+        "Description": "Nilakantha Somayaji of Kerala wrote the 'Tantrasamgraha' in 1500 CE—a work that proposed a partially heliocentric model of the solar system nearly a century before Tycho Brahe's similar model in Europe. He correctly proposed that the five visible planets orbit the Sun, while the Sun in turn orbits the Earth—a refinement far beyond the purely geocentric models of his era. He also independently derived infinite series for trigonometric functions that would only be rediscovered in Europe decades later. His work is the clearest evidence that the Kerala School of Mathematics was in direct intellectual conversation with the same astronomical problems that drove the European scientific revolution.",
         "Modern Edge": "The lesson is Continuous Refinement. Nilakantha didn't need to be 100% right immediately; he focused on making the current model more accurate. In life, don't wait for a total revelation to start improving. Refine your 'map' of the world iteratively based on reality, and you will eventually see things as they truly are."
       },
       {
@@ -1242,9 +1227,9 @@ final List<Map<String, dynamic>> storyList = [
       },
       {
         "Title": "Peshwa Baji Rao I: The Unbeaten Cavalry",
-        "Category": "Forgotten Heroes",
+        "Category": "Rulers",
         "Region": "West",
-        "Summary": "The general who never lost a battle.",
+        "Summary": "The Peshwa who never lost a single battle in 20 years of continuous warfare.",
         "Description": "Baji Rao I expanded the Maratha Empire into North India, moving the administrative seat to Pune. He is legendary for the Battle of Palkhed, where he outmaneuvered the Nizam of Hyderabad using only high-speed light cavalry. In 20 years of continuous warfare, he remained undefeated, establishing Maratha supremacy across the Deccan.",
         "Modern Edge": "The lesson is Speed over Mass. Baji Rao proved that you don't need a massive, slow army to win if you are fast and agile. In life, don't get bogged down by heavy, outdated ways of thinking. Use speed and quick adjustments to stay ahead of giant problems that are too slow to react to your moves."
       },
@@ -1254,14 +1239,14 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "The conqueror who realized that true victory is through peace.",
         "Description": "After the bloody Kalinga War, Emperor Ashoka was struck by remorse. He abandoned 'Digvijaya' (conquest by force) for 'Dharmavijaya' (conquest by righteousness). He erected pillars across the subcontinent inscribed with edicts on non-violence, medical care for animals, and respect for all faiths, spreading the message of Indian ethics as far as Greece and Egypt.",
-        "Modern Edge": "The lesson is the Power of Character. Ashoka realized that conquering people's bodies is temporary, but winning their hearts through values is eternal. Once you have achieved outward success, shift your focus to your 'inner pillars'—your ethics and kindness. True influence lasts longer than raw power."
+        "Modern Edge": "The lesson is The Power of Character. Ashoka realized that conquering people's bodies is temporary, but winning their hearts through values is eternal. Once you have achieved outward success, shift your focus to your 'inner pillars'—your ethics and kindness. True influence lasts longer than raw power."
       },
       {
         "Title": "Maharana Kumbha: The Architect King",
         "Category": "Rulers",
         "Region": "West",
         "Summary": "The invincible ruler of Mewar who built 32 forts.",
-        "Description": "Rana Kumbha was a polymath who never lost a battle. He built the massive Kumbhalgarh Fort, which has the second-longest wall in the world after the Great Wall of China. He was also a scholar of music and grammar, proving that a king's strength lies in both his fortress and his library.",
+        "Description": "Maharana Kumbha of Mewar ruled from 1433 to 1468 and never lost a single battle—a 35-year unbeaten record. He defeated the combined forces of the Gujarat and Malwa Sultanates and erected the Vijay Stambha (Tower of Victory) in Chittorgarh to commemorate his triumph. He built 32 forts across Rajasthan, including the impregnable Kumbhalgarh, whose outer wall stretches 36 kilometres—the second-longest continuous wall in the world after the Great Wall of China. He was equally formidable as a scholar, authoring four plays, a treatise on Chandishataka, and a musicological commentary that is still referenced in Hindustani classical theory. He remains the only figure in Indian history to be simultaneously undefeated in war and recognised as a master of the arts.",
         "Modern Edge": "The lesson is Dual Strength. Rana Kumbha shows that you shouldn't just be a 'warrior' or just a 'scholar.' Build 'forts' for your physical security and daily discipline, but also build a 'library' of knowledge and arts. A complete person is one who is strong enough to defend and wise enough to create."
       },
       {
@@ -1278,13 +1263,13 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "West",
         "Summary": "The second Chhatrapati who fought the Mughals for nine years.",
         "Description": "The son of Shivaji Maharaj, Sambhaji faced the full might of Aurangzeb's 500,000-strong army. He fought 120 battles and lost none. When captured, he was offered his life if he converted, but he refused to betray his faith or his motherland, facing a brutal end with a smile that inspired the entire Maratha nation to continue the fight.",
-        "Modern Edge": "The lesson is the Power of an Unbroken Spirit. Sambhaji teaches us that while they can take your life or your freedom, they cannot take your choice. By refusing to break under extreme pressure, he became a legend that inspired millions. Your refusal to compromise your soul is your ultimate victory."
+        "Modern Edge": "The lesson is The Power of an Unbroken Spirit. Sambhaji teaches us that while they can take your life or your freedom, they cannot take your choice. By refusing to break under extreme pressure, he became a legend that inspired millions. Your refusal to compromise your soul is your ultimate victory."
       },
       {
         "Title": "Chhatrapati Rajaram and the War of 27 Years",
         "Category": "Rulers",
         "Region": "West",
-        "Summary": "The king who ruled from the moving saddle.",
+        "Summary": "The king who refused to give the Mughal empire a stationary target for 27 years.",
         "Description": "After Sambhaji, his brother Rajaram led the Marathas. He realized they couldn't fight a conventional war, so he moved the capital to Gingee in the South. He transformed the empire into a decentralized resistance, forcing the Mughals into a 27-year-long war of attrition that eventually broke the Mughal treasury.",
         "Modern Edge": "The lesson is Endurance through Adaptability. When the situation is too heavy to face head-on, move your 'capital.' Rajaram stayed in the 'saddle' for years, refusing to give the enemy a stationary target. Stay mobile and persistent, and eventually, the massive weight of the problem will break itself."
       },
@@ -1292,8 +1277,8 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Tarabai: The Queen Who Led the Resurgence",
         "Category": "Rulers",
         "Region": "West",
-        "Summary": "The widow queen who defeated Aurangzeb's pride.",
-        "Description": "Rani Tarabai, the widow of Rajaram, took command of the Maratha forces herself. She organized the counter-offensive that drove the Mughals out of the Deccan. It was under her leadership that the Marathas moved from defense to offense, crossing the Narmada river to take the fight to North India.",
+        "Summary": "The widow queen who turned Maratha retreat into a pan-Indian offensive that crossed the Narmada.",
+        "Description": "Rani Tarabai was the widow of Chhatrapati Rajaram and the daughter-in-law of Shivaji Maharaj. When Rajaram died in 1700, Aurangzeb believed the Maratha resistance would finally collapse. Tarabai proved him wrong. She assumed personal command of the Maratha army, reorganized the command structure, and launched simultaneous offensives on multiple fronts—fighting a war of skirmishes, raids, and supply disruptions that the aging Mughal emperor's exhausted forces could not contain. Under her command, Maratha generals crossed the Narmada and collected tribute in Malwa and Gujarat—territory the Mughals had considered entirely secured. Aurangzeb died in 1707 still fighting her, having spent the last 27 years of his life and the entire Mughal treasury on a war he never won.",
         "Modern Edge": "The lesson is Turning Defense into Offense. Tarabai shows us that there is a moment when you must stop just surviving and start attacking your problems. Once the 'enemy' (your fear or hardship) is tired of chasing you, that is the exact time to strike back and reclaim your territory."
       },
       {
@@ -1305,12 +1290,12 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Choosing Freedom over Comfort. Pratap could have lived in luxury as a puppet, but he chose grass rotis and the forest to stay free. If your 'comfort' requires you to give up your values, it is a prison. Sacrifice your luxuries today so you can live with your head held high tomorrow."
       },
       {
-        "Title": "Chhatrapati Shahu and the Expansion of the Empire",
+        "Title": "Devapala: The Pala Emperor Who Commanded the Seas",
         "Category": "Rulers",
-        "Region": "West",
-        "Summary": "The visionary who transformed the Maratha state into a Pan-Indian power.",
-        "Description": "Grandson of Shivaji Maharaj, Shahu spent years in Mughal captivity. Upon his release, he unified the warring Maratha factions. He had the genius to recognize the talent of the Peshwas, delegating military command while remaining the moral and sovereign head. Under his reign, the Marathas moved from defending the Deccan to collecting taxes from the gates of Delhi and Bengal.",
-        "Modern Edge": "The lesson is Empowering Talent. Shahu knew he didn't need to be the best warrior to be a great king; he just needed to find the best warriors and trust them. In your life, don't try to be everything. Find people who are better than you in certain areas, empower them, and together you will reach far beyond your own limits."
+        "Region": "East",
+        "Summary": "The Bengal emperor whose power stretched from the Himalayas to the Deccan—and whose influence crossed the Bay of Bengal.",
+        "Description": "Devapala of the Pala dynasty ruled Bengal and Bihar from approximately 810 to 850 CE and presided over the absolute zenith of Pala power—an era when the Gangetic east was not merely a regional force but the dominant power of the Indian subcontinent. He fought and held his own against both the Rashtrakutas of the Deccan and the Gurjara-Pratiharas of the northwest simultaneously—the two other great powers of 9th-century India—in the three-way contest for Kanauj that historians call the Tripartite Struggle. He extended Pala territory deep into Assam and Odisha and pushed north into the Himalayas. What makes Devapala remarkable beyond his military record is his international reach: Balaputradeva, the king of the Srivijaya Empire in Sumatra (modern Indonesia), sent an embassy to Devapala requesting a grant of five villages to endow a monastery at Nalanda—evidence that Bengal under Devapala was so central to the Buddhist world that a Southeast Asian king considered it worth maintaining diplomatic relations. Devapala granted the request. Under his patronage, Nalanda and Vikramashila reached their greatest enrollment, and the Pala school of Buddhist art—characterized by its distinctive black basalt sculpture—spread its visual language across Nepal, Tibet, Myanmar, and Java. He remains the last Indian emperor before the medieval period whose power was simultaneously felt across the subcontinent and across the ocean.",
+        "Modern Edge": "The lesson is Becoming a Hub. Devapala didn't just conquer territory—he became the center of a world. When you build genuine excellence in what you do, people from distant places will seek you out and invest in your ecosystem. True greatness is not measured only by what you hold, but by how many people want to be connected to what you are building."
       },
       {
         "Title": "Maharana Amar Singh and the Treaty of Dignity",
@@ -1326,14 +1311,14 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "North",
         "Summary": "The youth who used the court and the gallows as a stage for freedom.",
         "Description": "Bhagat Singh was a brilliant thinker who believed that 'the sword of revolution is sharpened on the whetting-stone of ideas.' After the death of Lala Lajpat Rai, he and his comrades took a stand against British tyranny. In 1929, he threw non-lethal smoke bombs in the Central Legislative Assembly to 'make the deaf hear.' He refused to escape, using his trial to spread the message of independence. At the age of 23, he went to the gallows with a smile, singing songs of patriotism, sparking a fire that eventually led to the end of colonial rule.",
-        "Modern Edge": "The lesson is the Power of Ideas. Bhagat Singh knew that a person can be killed, but an idea is immortal. Use your intellect and your voice to 'make the deaf hear.' When you stand up for a truth with total conviction, even your setbacks become a stage to inspire others."
+        "Modern Edge": "The lesson is The Power of Ideas. Bhagat Singh knew that a person can be killed, but an idea is immortal. Use your intellect and your voice to 'make the deaf hear.' When you stand up for a truth with total conviction, even your setbacks become a stage to inspire others."
       },
       {
         "Title": "Hakim Khan Suri: The Loyal Vanguard",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "The Pathan warrior who stood by Pratap until the very end.",
-        "Description": "Hakim Khan Suri was the chief of Maharana Pratap's artillery and led the frontal assault at Haldighati. He saw Pratap as the true leader of a sovereign India. Legend has it that he fought so fiercely that even after he fell, his grip on his sword was so tight that it had to be buried with him. He remains a symbol of the deep communal harmony and shared sacrifice of the Mewari resistance.",
+        "Summary": "The Afghan Muslim general who led the frontal charge for Hindu Mewar.",
+        "Description": "Hakim Khan Suri commanded Maharana Pratap's artillery and led the most dangerous assignment at Haldighati—the direct frontal assault on the Mughal center. As an Afghan Muslim fighting for a Rajput Hindu king against a Mughal Muslim emperor, his very presence shattered every simplistic narrative about the era. He saw Pratap not as a Hindu king, but as the rightful sovereign of a free India. Legend holds that he fought with such ferocity that even after he fell, his grip on his sword could not be broken—and so the sword was buried with him. He remains the most powerful symbol of communal harmony and shared sacrifice in the entire Mewari resistance.",
         "Modern Edge": "The lesson is Shared Values over Tribalism. Hakim Khan didn't fight for Pratap because they were from the same background, but because they shared the same mission. Align yourself with people who share your values, not just your history. Loyalty built on a shared purpose is the strongest bond of all."
       },
       {
@@ -1350,7 +1335,7 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "West",
         "Summary": "The tribal chief who mastered the art of guerrilla warfare.",
         "Description": "Rana Punja and his Bhil warriors were the masters of the rugged Aravalli terrain. At Haldighati, they rained boulders and arrows down from the cliffs, causing chaos in the Mughal ranks. Punja's unwavering support was why Pratap could survive in the forests for 20 years. To this day, the Mewar Royal Emblem features a Bhil warrior on one side, honoring Rana Punja's legacy.",
-        "Modern Edge": "The lesson is the Power of Local Wisdom. Rana Punja shows that those who know the 'terrain' of a situation are your most valuable allies. Respect and listen to the 'scouts'—the people who understand the ground level. Their simple tools (boulders and arrows) can defeat any 'emperor's' army."
+        "Modern Edge": "The lesson is The Power of Local Wisdom. Rana Punja shows that those who know the 'terrain' of a situation are your most valuable allies. Respect and listen to the 'scouts'—the people who understand the ground level. Their simple tools (boulders and arrows) can defeat any 'emperor's' army."
       },
       {
         "Title": "Jaimal and Kalla: The Four-Armed Warrior",
@@ -1364,7 +1349,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Patta Chawat: The Young Defender",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "The 16-year-old who led the defense of Chittor.",
+        "Summary": "The 16-year-old whose last charge was so valiant that Akbar built a stone statue in his honour.",
         "Description": "Alongside Jaimal and Kalla, the young Rawat Patta Sisodia fought with legendary bravery. After his mother and wife donned saffron and committed Jauhar, Patta led the charge against the Mughal forces. His valor was so immense that Akbar later erected stone statues of Jaimal and Patta at the gates of Agra Fort to honor their indomitable spirit.",
         "Modern Edge": "The lesson is Absolute Dedication. Patta shows that when you have lost everything except your duty, you become truly invincible. Don't let your 'youth' or 'inexperience' stop you from leading. If you are fully committed to your path, even your 'enemies' will have to build a statue to your courage."
       },
@@ -1380,7 +1365,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "The Night Engineers of Mewar",
         "Category": "Ancient Science",
         "Region": "West",
-        "Summary": "Repairing a fortress under the cover of darkness.",
+        "Summary": "The engineers who rebuilt Chittor's cannon-blasted walls every night using lime, stone, and jaggery.",
         "Description": "The Siege of Chittor lasted months because of the Mewari engineers. Every day, Mughal cannons would blast holes in the limestone walls. Every night, under a rain of musket fire, the workers and soldiers (led by Jaimal) would use a specific mixture of stone, lime, and jaggery to rebuild the walls. This 'instant-setting' masonry kept the fort impregnable for months against the world’s most advanced artillery of that time.",
         "Modern Edge": "The lesson is Daily Restoration. You will get 'hit' every day by life's cannons, but the secret is to 'rebuild the wall' every night. Don't go to sleep with a hole in your spirit. Use your own 'limestone and jaggery'—your routines and reflections—to patch your character before the sun rises."
       },
@@ -1388,7 +1373,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Phool Kanwar: The Flame of Chittor",
         "Category": "Forgotten Heroes",
         "Region": "West",
-        "Summary": "The Queen who led the final Jauhar.",
+        "Summary": "The Queen whose iron composure gave the men of Chittor the freedom to die without fear.",
         "Description": "Phool Kanwar was the wife of Rawat Patta and the sister of Kalla Ji. When it became clear that the fort would fall, she did not wait in despair. She organized and led thousands of women into the 'Jauhar' (ceremonial fire) to protect their honor. Her leadership ensured that the men could walk out into the 'Saka' (final fight) without any worry for their families, focusing purely on their duty to the land.",
         "Modern Edge": "The lesson is Focused Determination. Phool Kanwar shows that even in the face of total loss, you can provide the peace of mind that allows others to do their duty. Lead with such strength that those around you feel 'free' to focus on their own purpose. Honor is the one thing no one can take from you."
       },
@@ -1428,7 +1413,7 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Ibrahim Khan Gardi: The Loyal Musketeer",
         "Category": "Forgotten Heroes",
         "Region": "North",
-        "Summary": "The General who proved loyalty knows no religion.",
+        "Summary": "The Afghan Muslim general who refused to defect from a Hindu king's cause even when offered his life.",
         "Description": "Ibrahim Khan Gardi was the commander of the Maratha artillery. Using advanced French-trained tactics, his cannons decimated the Afghan ranks in the early hours of the battle. When the Maratha line began to crumble, he was offered safety to defect because of his faith, but he refused, stating his loyalty was to the Maratha State and Sadashivrao Bhau. He fought until he was captured and executed.",
         "Modern Edge": "The lesson is Integrity over Convenience. Gardi shows that a person is defined by their refusal to abandon their post when things get difficult. In a crisis, your most valuable trait is the integrity to stay with your convictions, even when you are offered an 'easy way out' that betrays your word."
       },
@@ -1453,16 +1438,16 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "North",
         "Summary": "The legendary Sikh Commander who terrified invaders.",
-        "Description": "As the Commander-in-chief of the Sikh Empire, Hari Singh Nalwa secured the Khyber Pass—the gateway used by invaders for centuries. He built forts and established a presence so formidable that his name alone became a deterrent against potential invasions for generations.",
+        "Description": "Hari Singh Nalwa was the Commander-in-Chief of the Sikh Khalsa Army under Maharaja Ranjit Singh. He fought 19 major campaigns and was personally responsible for extending the Sikh Empire to the Khyber Pass—a feat no Indian power had achieved in over a thousand years. He built the fort of Jamrud at the entrance to the pass in 1836, sealing the gateway that had admitted every foreign invader from Alexander to Babur. He was killed in 1837 defending that fort, but by then his reputation was so formidable that Pashtun mothers used his name to silence crying children. He remains the last commander in Indian history to hold the Khyber Pass as sovereign territory.",
         "Modern Edge": "The lesson is Building a Formidable Reputation. Nalwa shows that by being consistently excellent and strong, your reputation becomes a 'wall' that prevents problems from even starting. Aim to be so reliable and capable that difficulties 'stay home' rather than challenging you."
       },
       {
-        "Title": "Rani Abbakka Chowta: The Fearless Queen",
+        "Title": "Rani Abbakka Chowta: The Fearless Queen of Ullal",
         "Category": "Rulers",
         "Region": "South",
-        "Summary": "The Tuluva Queen who fought the Portuguese for 40 years.",
-        "Description": "Known as 'Abhaya Rani', she repeatedly defeated Portuguese attempts to capture the port of Ullal. She used fire-arrows and night-raid tactics to protect her trade freedom, refusing to pay tribute to foreign invaders for over four decades.",
-        "Modern Edge": "The lesson is Using Unconventional Tactics. Abbakka didn't fight the 'big fleet' out in the open where they were strong; she hit them where they were weak. When facing a massive challenge, don't use brute force. Use 'fire-arrows'—targeted, smart disruptions—to make the problem too 'expensive' to continue."
+        "Summary": "The Tuluva Queen who defeated the Portuguese for 40 years using naval guerrilla tactics and communal unity.",
+        "Description": "Rani Abbakka Chowta was the first woman in India to mount a sustained military resistance against the Portuguese Empire. Ruling Ullal under a matrilineal succession system, 'Abhaya Rani' (the Fearless Queen) was a master of diplomacy and naval warfare. When the Portuguese demanded tribute, she refused. Utilizing a diverse army of Hindus and Muslims, including the famous 'Mapilla' archers, she counter-attacked at night using fire-arrows and coastal guerrilla tactics to burn Portuguese ships. She fought them off for four decades, allying with the Zamorin of Calicut. Even after being betrayed by her estranged husband, she organized a prison revolt in captivity, cementing her legacy as the pioneer of India's coastal defense.",
+        "Modern Edge": "The lesson is Unconventional Unity. Rani Abbakka built an 'un-hackable' defense by uniting people from different backgrounds and hitting the enemy where they were weak. When facing a massive challenge, don't use brute force. Bring a diverse group of thinkers together and use smart, targeted disruptions to make the problem too 'expensive' to continue."
       },
       {
         "Title": "Raja Dahir: The Last Hindu King of Sindh",
@@ -1476,8 +1461,8 @@ final List<Map<String, dynamic>> storyList = [
         "Title": "Zorawar Singh: The Himalayan Conqueror",
         "Category": "Rulers",
         "Region": "North",
-        "Summary": "The General who fought at the roof of the world.",
-        "Description": "General Zorawar Singh led expeditions into Ladakh and Tibet, regions where no army had ever dared to campaign due to the extreme altitude and cold. He expanded the borders of the Dogra Empire into the clouds through sheer physical and mental endurance.",
+        "Summary": "The Dogra general who conquered Ladakh and Tibet at 18,000 feet—where no army had campaigned before.",
+        "Description": "General Zorawar Singh Kahluria served under Maharaja Gulab Singh of Jammu and became the greatest high-altitude military commander in Indian history. Between 1834 and 1841, he conquered Ladakh, Baltistan, and large parts of Western Tibet—campaigns conducted at altitudes above 18,000 feet where horses died, supplies ran out, and temperatures fell to lethal lows. He built forts in terrain where no army had ever established permanent control. In 1841, during his Tibet campaign, he was killed in battle near Lake Manasarovar at the age of 60—still leading from the front. The Treaty of Chushul that followed his death enshrined his conquests as permanent Dogra territory, and his campaigns defined the borders of Ladakh that India still holds today.",
         "Modern Edge": "The lesson is Conquering the Hard Places. Zorawar went where there was 'no oxygen'—where the challenge was too high for others to even try. Growth often lives in the 'impossible geography' of your fears. If a path is easy, everyone is on it; seek the high, difficult peaks instead."
       },
       {
@@ -1485,27 +1470,27 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "West",
         "Summary": "The King who saved India from the Umayyad invasion.",
-        "Description": "In the 8th century, the Umayyad Caliphate was an unstoppable global force until they met Nagabhata I. He led a confederacy of Indian kings to decisively defeat the invaders in Rajasthan, protecting the heartland of India for centuries to come.",
+        "Description": "Nagabhata I was the founder of the Gurjara-Pratihara dynasty and one of the most consequential military leaders of 8th-century India. When the Umayyad Caliphate—fresh from conquering Persia, Central Asia, and Spain—sent their forces under Junaid and then Tamin into India, Nagabhata assembled a confederacy of Rajput and allied kingdoms. He fought a series of decisive engagements in Rajasthan, repelling the most powerful military force of the medieval world and ending the Caliphate's eastern expansion permanently. His dynasty would go on to defend India's western frontier for another three centuries, earning the title 'Pratihara'—the Guardian—of the subcontinent.",
         "Modern Edge": "The lesson is Unity against Existential Threats. Nagabhata realized that bickering with his peers would lead to everyone's ruin. When a massive outside force threatens your world, set aside minor differences and unite. Synergy with others is often the only way to survive a 'global' crisis."
       },
       {
-        "Title": "Peer Ali Khan: The Rebel Bookseller",
+        "Title": "Peer Ali Khan: The Revolutionary Behind the Bookshelf",
         "Category": "Forgotten Heroes",
         "Region": "North",
-        "Summary": "The quiet intellectual who fueled a revolution.",
-        "Description": "A bookshop owner in Patna who became a key organizer of the 1857 rebellion. He used his shop as a secret meeting point for revolutionaries, proving that the pen and the word are often as dangerous to tyrants as the sword.",
-        "Modern Edge": "The lesson is the Power of a Quiet Hub. You don't need to be on a battlefield to start a revolution. Peer Ali used his 'boring' day job as a cover to organize something much bigger. Your daily routine can be the foundation for a profound change if you use it with intention."
+        "Summary": "The bookshop owner who made his store the secret nerve center of the 1857 rebellion.",
+        "Description": "Peer Ali Khan ran a modest bookshop in Patna, but beneath its quiet shelves, he orchestrated one of the most active revolutionary cells of the 1857 uprising in Bihar. He used his store as a safe house, communication hub, and recruitment center for the rebellion. When the plot was discovered, he was tried and hanged—his only defense being that he could not watch his country be ruled by foreigners in silence. In a movement remembered for its soldiers and kings, Peer Ali Khan stands as proof that the most dangerous revolutionary is often the one with a pen, a shelf of books, and a quietly burning fire.",
+        "Modern Edge": "The lesson is The Power of a Quiet Hub. You don't need to be on a battlefield to start a revolution. Peer Ali used his 'boring' day job as a cover to organize something much bigger. Your daily routine can be the foundation for a profound change if you use it with intention."
       },
       {
         "Title": "Mihira Bhoja: The Constant Defender",
         "Category": "Rulers",
         "Region": "North",
         "Summary": "The Gurjara-Pratihara king who held the line for 50 years.",
-        "Description": "Mihira Bhoja maintained a massive standing army, including a legendary cavalry, to defend India's western borders. His reign was so stable and prosperous that travelers noted his kingdom was safe from even the smallest crimes, creating a golden age of security.",
-        "Modern Edge": "The lesson is the Value of Consistency. Bhoja proved that 50 years of being a 'reliable constant' creates more prosperity than short-lived bursts of action. Be the person that people can trust when everything else is in chaos. Reliability is its own form of greatness."
+        "Description": "Mihira Bhoja, who ruled the Gurjara-Pratihara Empire from around 836 to 885 CE, presided over one of the largest empires in 9th-century Asia. Arab geographer Al-Yaqubi noted that no other Indian king matched the size of his cavalry or the wealth of his treasury. The Arab traveler Sulaiman wrote that Bhoja's kingdom was so secure and his police presence so efficient that crime was virtually absent and trade flourished without interruption. He spent 50 years defending India's western borders against renewed Arab pressure while simultaneously holding off the Rashtrakutas and Palas. He is the missing chapter in the story of Indian resistance—the man who held the western gate for half a century with no single dramatic battle, just relentless, consistent strength.",
+        "Modern Edge": "The lesson is The Value of Consistency. Bhoja proved that 50 years of being a 'reliable constant' creates more prosperity than short-lived bursts of action. Be the person that people can trust when everything else is in chaos. Reliability is its own form of greatness."
       },
       {
-        "Title": "Kuyili: The First Human Bomb",
+        "Title": "Kuyili: The Commander Who Turned the Tide",
         "Category": "Forgotten Heroes",
         "Region": "South",
         "Summary": "The commander who sacrificed herself to destroy the enemy's armory.",
@@ -1517,7 +1502,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Forgotten Heroes",
         "Region": "East",
         "Summary": "The revolutionary who believed in 'Amra morbo, jagbe desh'.",
-        "Description": "Jatin Mukherjee was a key leader of the Jugantar movement. He famously fought a Royal Bengal Tiger with only a dagger. Later, he organized an international network to ship arms to India, dying in a heroic trench fight against the British police in Balasore.",
+        "Description": "Jatin Mukherjee—known as Bagha Jatin, the Tiger—was the supreme leader of the Jugantar revolutionary movement in Bengal. As a young man, he killed a Royal Bengal Tiger in hand-to-hand combat with only a dagger—an act that became legend. As a revolutionary, he operated on a global scale, coordinating with the Indian National Party in Berlin and the Ghadar Party in America to smuggle a shipment of German arms into India during World War I—a plan that, if successful, would have triggered a nationwide uprising. British intelligence intercepted the arms ship. Cornered at Balasore in 1915, Jatin and four comrades fought an hour-long battle against a force of heavily armed police before he was fatally wounded. He died in hospital the next day, refusing to give any information about his network.",
         "Modern Edge": "The lesson is Global Perspective. Jatin knew that while a 'local tiger' is fought with a dagger (hustle), a 'global empire' requires international networks. Connect with resources and support from far and wide to fuel your personal growth and solve big problems."
       },
       {
@@ -1525,7 +1510,7 @@ final List<Map<String, dynamic>> storyList = [
         "Category": "Rulers",
         "Region": "South",
         "Summary": "The pioneer of rocket artillery and the fiercest foe of the British.",
-        "Description": "Tipu Sultan was the ruler of the Kingdom of Mysore who fought four Anglo-Mysore wars. He was a polymath who modernized his army with the 'Mysorean Rockets'—iron-cased rockets that terrified British troops and later influenced the development of modern rocketry. Despite immense pressure, he refused to become a subsidiary of the British Empire, dying on the battlefield defending his capital, Seringapatam.",
+        "Description": "Tipu Sultan was the ruler of the Kingdom of Mysore who fought three Anglo-Mysore wars. He was a polymath who modernized his army with the 'Mysorean Rockets'—iron-cased rockets that terrified British troops and later influenced the development of modern rocketry. Despite immense pressure, he refused to become a subsidiary of the British Empire, dying on the battlefield defending his capital, Seringapatam.",
         "Modern Edge": "The lesson is Owning your Innovations. Tipu didn't just 'buy' tools; he built his own. In your life, don't just follow someone else's manual; innovate and create your own 'rocket R&D.' If you own the unique skills and ideas, you become someone who cannot be easily ignored or controlled."
       },
       {
@@ -1538,24 +1523,24 @@ final List<Map<String, dynamic>> storyList = [
       },
       {
         "Title": "The Battle of Takkolam",
-        "Category": "Rulers",
+        "Category": "Battles",
         "Region": "South",
-        "Summary": "A sudden shift in the Chola-Rashtrakuta rivalry.",
-        "Description": "A decisive clash in 949 CE where the Rashtrakutas used a surprise elephant charge to kill the Chola prince Rajaditya. This battle temporarily halted Chola expansion, proving that a single, well-timed tactical strike can dismantle the momentum of a rising empire.",
-        "Modern Edge": "The lesson is the Power of a Targeted Strike. You don't always need to win every small skirmish; you just need to address the 'core' of a problem. Identify the one vulnerability that keeps a negative situation moving forward, and aim your focus there to stall its momentum."
+        "Summary": "The battle where a surprise elephant charge killed a Chola prince and halted an empire's momentum.",
+        "Description": "The Battle of Takkolam in 949 CE was the pivotal moment that temporarily broke Chola supremacy in the Deccan. The Rashtrakuta forces, commanded by Krishna III, executed a surprise elephant charge directly at the Chola vanguard. The Chola crown prince Rajaditya was killed on his war elephant—a death so sudden and so public that the entire Chola formation lost its cohesion. The Rashtrakutas pressed the advantage and drove the Cholas south, capturing territory they would hold for a generation. It stands as one of the clearest examples in Indian military history of how a single targeted strike at the enemy's highest-value target can collapse a force that is, on every other measure, equal or superior.",
+        "Modern Edge": "The lesson is The Power of a Targeted Strike. You don't always need to win every small skirmish; you just need to address the 'core' of a problem. Identify the one vulnerability that keeps a negative situation moving forward, and aim your focus there to stall its momentum."
       },
       {
         "Title": "The Battle of Khanwa",
         "Category": "Battles",
         "Region": "North",
         "Summary": "The battle that established Mughal dominance in India.",
-        "Description": "In 1527, Babur faced a coalition of Rajput kings led by Rana Sanga. Despite being outnumbered, Babur's use of field artillery and innovative tactics led to a decisive victory, paving the way for the Mughal Empire's establishment in India.",
+        "Description": "The Battle of Khanwa in March 1527 was arguably more decisive than Panipat in establishing Mughal power in India. Rana Sanga of Mewar had assembled the largest Rajput confederacy ever seen—an alliance of over 120 chiefs and princes. Babur was outnumbered nearly 10 to 1. He compensated with field artillery deployed in the Ottoman 'araba' style, mobile cavalry flanking maneuvers, and a key tactical innovation: positioning his guns behind a wall of chained carts to prevent a direct charge. The Rajput cavalry—the finest in India—had no answer for massed artillery fire in open terrain. The confederacy broke, Rana Sanga barely escaped, and Babur declared himself Emperor of Hindustan. After this day, no single Rajput alliance would ever again have the scale or unity to challenge Mughal power.",
         "Modern Edge": "The lesson is Skill over Numbers. Babur proved that a 10:1 disadvantage in numbers doesn't matter if you have better 'artillery' (skills and preparation). Don't let overwhelming odds scare you; focus on out-thinking and out-skilling the challenge instead."
       },
       {
         "Title": "The Battle of Plassey",
         "Category": "Battles",
-        "Region": "North",
+        "Region": "East",
         "Summary": "The battle that marked the beginning of British colonial rule.",
         "Description": "In 1757, Robert Clive led the British East India Company against the Nawab of Bengal, Siraj ud-Daulah. Through a combination of military strategy and political intrigue (including bribing key allies), the British secured a decisive victory that allowed them to establish control over Bengal and eventually the entire subcontinent.",
         "Modern Edge": "The lesson is Managing Internal Friction. Clive didn't win with just bullets; he won by identifying the cracks in the opposition's team. In your own life, ensure your inner circle is unified. If you have internal conflict, even a 'small' outside force can bring everything down."
@@ -1569,12 +1554,12 @@ final List<Map<String, dynamic>> storyList = [
         "Modern Edge": "The lesson is Starting from the Ground Up. Malharrao proved that being a master of the 'technical' skills on the ground is the best resume for leadership. Master the core aspects of your craft better than anyone else, and your path to 'sovereignty' will open naturally."
       },
       {
-        "Title": "Sukhdev: The Mastermind of HRSA",
+        "Title": "Sukhdev: The Mastermind of HSRA",
         "Category": "Freedom Fighters",
         "Region": "North",
         "Summary": "The chief strategist who organized the revolutionary network.",
         "Description": "Sukhdev Thapar was the brain behind the organizational structure of the HSRA. While others were the face of the movement, Sukhdev was the planner who established revolutionary cells across North India. He was instrumental in the Lahore Conspiracy Case and was the one who pushed the group toward intellectual growth, making sure every revolutionary was as well-read as they were brave.",
-        "Modern Edge": "The lesson is the Architect Model. Every movement needs a 'brain' to design the system. While others might be the face, you can find your strength in building the backend support and intellectual foundation that makes the whole structure stand firm."
+        "Modern Edge": "The lesson is The Architect Model. Every movement needs a 'brain' to design the system. While others might be the face, you can find your strength in building the backend support and intellectual foundation that makes the whole structure stand firm."
       },
       {
         "Title": "Rajguru: The Precision Marksman",
@@ -1594,11 +1579,11 @@ final List<Map<String, dynamic>> storyList = [
       },
       {
         "Title": "Mangal Pandey: The First Spark",
-        "Category": "Forgotten Heroes",
+        "Category": "Freedom Fighters",
         "Region": "North",
         "Summary": "The soldier whose single act of defiance ignited the 1857 Uprising.",
-        "Description": "A sepoy in the 34th Bengal Native Infantry, Mangal Pandey revolted against the use of greased cartridges that offended his religious beliefs. On March 29, 1857, at Barrackpore, his open rebellion and call to his comrades to join him became the catalyst for the First War of Indian Independence. Though he was executed, his name became a rallying cry for thousands of soldiers across the subcontinent.",
-        "Modern Edge": "The lesson is Breaking the Inertia. One single act of radical integrity can shatter a century of people just 'going along' with a bad system. If you see something that is fundamentally wrong, don't wait for a committee; be the spark that forces everyone else to choose where they stand."
+        "Description": "A sepoy in the 34th Bengal Native Infantry, Mangal Pandey revolted against the use of greased cartridges that violated his religious beliefs. On March 29, 1857, at Barrackpore, he openly attacked his British officers and called on his fellow soldiers to rise—a public act of rebellion that sent shockwaves through the colonial administration. Though he was executed within weeks, his name became the rallying cry that triggered the First War of Indian Independence across the subcontinent. The British were so alarmed by his influence that they coined the word 'Pandies' for any mutinous soldier.",
+        "Modern Edge": "The lesson is Breaking the Inertia. One single act of radical integrity can shatter a century of people just going along with a broken system. If you see something fundamentally wrong, don't wait for a committee or a consensus—be the spark that forces everyone around you to choose which side they truly stand on."
       },
       {
         "Title": "Sardar Patel: The Iron Will",
@@ -1606,90 +1591,104 @@ final List<Map<String, dynamic>> storyList = [
         "Region": "West",
         "Summary": "The organizational genius who turned small protests into a national movement.",
         "Description": "Before becoming the architect of modern India, Vallabhbhai Patel led the Bardoli Satyagraha with such surgical precision that the title 'Sardar' (Chief) was given to him by the people. He excelled in the 'ground game'—organizing villages, managing logistics, and ensuring absolute non-violent discipline among thousands. His ability to bridge the gap between high-level political strategy and grassroots execution made the freedom struggle an unstoppable force.",
-        "Modern Edge": "The lesson is the Strength of Logistics. Sardar Patel shows that you don't win just with speeches; you win by organizing every small detail into a disciplined unit. Master the unglamorous backend work to create an unstoppable frontend result."
+        "Modern Edge": "The lesson is The Strength of Logistics. Sardar Patel shows that you don't win just with speeches; you win by organizing every small detail into a disciplined unit. Master the unglamorous backend work to create an unstoppable frontend result."
       },
-      ];
+      {
+        "Title": "Rani Gaidinliu: The Naga Joan of Arc",
+        "Category": "Freedom Fighters",
+        "Region": "East",
+        "Summary": "The 13-year-old who led a Naga rebellion and spent 14 years in British prison for it.",
+        "Description": "Gaidinliu was born in 1915 in Manipur's Naga Hills and became a follower of the Heraka religious movement led by her cousin Haipou Jadonang, who preached the expulsion of the British from Naga territory. When Jadonang was executed by the British in 1931, Gaidinliu—just 16 years old—assumed command of the entire movement. She raised an army of Naga warriors, collected taxes from villages to fund the resistance, and evaded British forces across the dense hill forests for months. When she was finally captured in 1932, she was 17 years old. The British sentenced her to life imprisonment, terrified of what a teenage girl commanding tribal loyalty represented. She was released only after Independence in 1947, having spent 14 years in prison. Jawaharlal Nehru, who visited her in jail, gave her the title 'Rani'—Queen—of the Nagas. She lived until 1993, spending her post-independence life fighting for the rights and identity of the Naga people.",
+        "Modern Edge": "The lesson is Stepping Into the Vacancy. When the leader falls, most people wait for someone else to rise. Gaidinliu stepped forward at 16 with no title, no army, and no plan except the clarity of purpose. The most important leadership moments in life are rarely announced—they arrive the moment someone leaves a gap and you decide to fill it, not because you are ready, but because the cause still stands."
+      },
+      {
+        "Title": "Lilavati: The Daughter Who Became a Theorem",
+        "Category": "Ancient Science",
+        "Region": "North",
+        "Summary": "The 12th-century woman whose mathematical genius was immortalised in a textbook named after her.",
+        "Description": "Lilavati was the daughter of the great mathematician Bhaskara II, and by every account preserved in the Indian mathematical tradition, she was his most gifted student. Bhaskara II named his landmark chapter on arithmetic and algebra after her—the 'Lilavati'—a work so elegant and so clear that it became the standard mathematics textbook across India and Persia for over 600 years. The text is written as a series of problems posed to Lilavati directly, in verse: 'O Lilavati, tell me—if a bamboo 18 cubits high breaks at a point and its top touches the ground 6 cubits away, where did it break?' The problems are playful, precise, and addressed to her as an intellectual equal. Whether she co-authored the work or simply inspired it, her name carries a theorem that outlasted dynasties. In a century when women's intellectual contributions were almost never recorded, Lilavati's name was inscribed into the foundation of Indian mathematics—and stayed there.",
+        "Modern Edge": "The lesson is That Your Name Can Outlive the Silence. Lilavati lived in a world that did not record women's contributions. Yet a theorem carries her name 900 years later because her father—and the tradition he built—refused to erase her. In your own life, document what you know, share what you learn, and name the people who shaped your thinking. The act of attribution is itself a form of justice."
+      },
+    ];
 
-  // --- AUTOMATED CHANGE DETECTION ---
-  // 1. Calculate a hash of the local data
-  final String localDataJson = jsonEncode(storyList);
-  final int localHash = _generateSimpleHash(localDataJson);
+    // --- AUTOMATED CHANGE DETECTION ---
+    // 1. Calculate a hash of the local data
+    final String localDataJson = jsonEncode(storyList);
+    final String localHash = _generateSHA256Hash(localDataJson);
 
-  final DocumentReference configDoc =
-      firestore.collection('AppConfig').doc('storiesConfig');
+    final DocumentReference configDoc =
+        firestore.collection('AppConfig').doc('storiesConfig');
 
-  // 2. Check Firestore for the last uploaded hash
-  final configSnapshot = await configDoc.get();
-  int? remoteHash;
-  if (configSnapshot.exists && configSnapshot.data() != null) {
-    remoteHash = (configSnapshot.data() as Map<String, dynamic>)['hash'];
-  }
-
-  // 3. If hashes match, stop immediately.
-  if (localHash == remoteHash) {
-    debugPrint('Stories data is up to date (Hash: $localHash). No sync needed.');
-    return;
-  }
-
-  debugPrint('Change detected in Stories. Syncing...');
-
-  // 4. Get all existing docs for smart diff
-  QuerySnapshot currentDocs = await stories.get();
-  final Map<String, dynamic> existingDataMap = {
-    for (var doc in currentDocs.docs) doc.id: doc.data()
-  };
-
-  final Set<String> scriptTitles = storyList.map((s) => s['Title']! as String).toSet();
-
-  WriteBatch batch = firestore.batch();
-  int writeCount = 0;
-
-  // 5. DELETE
-  for (var doc in currentDocs.docs) {
-    if (!scriptTitles.contains(doc.id)) {
-      batch.delete(doc.reference);
-      writeCount++;
+    // 2. Check Firestore for the last uploaded hash
+    final configSnapshot = await configDoc.get();
+    String? remoteHash;
+    if (configSnapshot.exists && configSnapshot.data() != null) {
+      remoteHash = (configSnapshot.data() as Map<String, dynamic>)['hash'] as String?;
     }
-  }
 
-  // 6. ADD/UPDATE
-  for (var story in storyList) {
-    final String docId = story['Title'];
-    final DocumentReference docRef = stories.doc(docId);
+    // 3. If hashes match, stop immediately.
+    if (localHash == remoteHash) {
+      debugPrint('Stories data is up to date (Hash: $localHash). No sync needed.');
+      return;
+    }
 
-    bool needsUpdate = true;
-    if (existingDataMap.containsKey(docId)) {
-      if (jsonEncode(existingDataMap[docId]) == jsonEncode(story)) {
-        needsUpdate = false;
+    debugPrint('Change detected in Stories. Syncing...');
+
+    // 4. Get all existing docs for smart diff
+    final QuerySnapshot currentDocs = await stories.get();
+    final Map<String, dynamic> existingDataMap = {
+      for (var doc in currentDocs.docs) doc.id: doc.data(),
+    };
+
+    final Set<String> scriptTitles =
+        storyList.map((s) => s['Title']! as String).toSet();
+
+    final WriteBatch batch = firestore.batch();
+    int writeCount = 0;
+
+    // 5. DELETE docs no longer in the script
+    for (var doc in currentDocs.docs) {
+      if (!scriptTitles.contains(doc.id)) {
+        batch.delete(doc.reference);
+        writeCount++;
       }
     }
 
-    if (needsUpdate) {
-      batch.set(docRef, story);
-      writeCount++;
+    // 6. ADD / UPDATE docs that have changed
+    for (final story in storyList) {
+      final String docId = story['Title'] as String;
+      final DocumentReference docRef = stories.doc(docId);
+
+      bool needsUpdate = true;
+      if (existingDataMap.containsKey(docId)) {
+        if (jsonEncode(existingDataMap[docId]) == jsonEncode(story)) {
+          needsUpdate = false;
+        }
+      }
+
+      if (needsUpdate) {
+        batch.set(docRef, story);
+        writeCount++;
+      }
     }
-  }
 
-  // 7. Update Config Hash
-  batch.set(configDoc, {'hash': localHash, 'lastUpdated': FieldValue.serverTimestamp()});
-  writeCount++;
+    // 7. Update the config hash so next run skips unchanged data
+    batch.set(configDoc, {
+      'hash': localHash,
+      'lastUpdated': FieldValue.serverTimestamp(),
+    });
+    writeCount++;
 
-  await batch.commit();
-  debugPrint('✅ Synced Stories: $writeCount write operations performed.');
+    await batch.commit();
+    debugPrint('✅ Synced Stories: $writeCount write operations performed.');
   } catch (e) {
-    debugPrint("Error in uploadStories: $e");
+    debugPrint('Error in uploadStories: $e');
   }
 }
 
-// Simple hash function
-int _generateSimpleHash(String input) {
-  var hash = 0;
-  for (var i = 0; i < input.length; i++) {
-    hash = 0x1fffffff & (hash + input.codeUnitAt(i));
-    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
-    hash ^= hash >> 6;
-  }
-  hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
-  hash ^= hash >> 11;
-  return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+// SHA-256 hash for collision-resistant change detection
+String _generateSHA256Hash(String input) {
+  final bytes = utf8.encode(input);
+  final digest = sha256.convert(bytes);
+  return digest.toString();
 }

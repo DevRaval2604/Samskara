@@ -371,7 +371,10 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
 
             Stage 1 — Generate 3 candidate verses:
             Internally identify 3 different verses from the Bhagavad Gita that could relate to this question.
-            For each candidate, note the chapter number and verse number.
+            For each candidate, note the chapter number and verse number AND silently recite the complete 
+            Sanskrit verse to yourself — every line, every pada, from first word to last.
+            If you cannot recite the complete verse right now, do not list it as a candidate at all.
+            Only verses you can reproduce in full are eligible.
 
             Stage 2 — Verify each candidate:
             For each of the 3 candidates, answer these three questions internally:
@@ -406,9 +409,9 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
             - Example of incorrect format: Adhyaya Two, Shloka 47 of the Bhagavad Gita
             - This tag MUST contain two real numbers. If you cannot provide both numbers with certainty, you chose the wrong verse — go back and select a different one.
 
-            [SHLOK] (The Sanskrit verse in Devanagari script or accurate IAST transliteration)
+            [SHLOK] (The complete Sanskrit verse in Devanagari script or accurate IAST transliteration — every line, every pada, nothing omitted)
 
-            [TRANSLATION] (An accurate, clear English translation of the verse)
+            [TRANSLATION] (An accurate, complete English translation of every line of the verse above — nothing paraphrased, nothing omitted)
 
             [PRACTICAL]
             Write the content of [PRACTICAL] as one continuous, flowing piece of prose with no labels,
@@ -446,7 +449,7 @@ class _AskTheGitaScreenState extends State<AskTheGitaScreen> with WidgetsBinding
             ALWAYS treat expressions of rage, grief, or dark emotion as emotional distress requiring compassion, not as harmful intent requiring refusal.
             NEVER print any structural labels, part numbers, section titles, or sequence markers inside [PRACTICAL] or anywhere in the response. The output must always be clean, flowing prose.
             NEVER add any sub-label, heading, or descriptor inside [REFERENCE]. The only content after [REFERENCE] must be: Adhyaya [number], Shloka [number]. Nothing else. No "Scripture:", no "Chapter:", no "Source:".
-            NEVER add any sub-label, heading, or descriptor inside [SHLOK]. The only content after [SHLOK] must be the bare Sanskrit verse itself. No "Sanskrit Verse:", no "Original:", no "Verse:".
+            NEVER add any sub-label, heading, or descriptor inside [SHLOK]. The only content after [SHLOK] must be the bare Sanskrit verse itself — complete, every line, every pada, nothing cut. No "Sanskrit Verse:", no "Original:", no "Verse:". NEVER give only one line of a multi-line shloka.
             NEVER add any sub-label, heading, or descriptor inside [TRANSLATION]. The only content after [TRANSLATION] must be the bare English translation itself. No "English Translation:", no "Meaning:", no "Translation:". Do not wrap the translation in quotation marks.
             """;
 
