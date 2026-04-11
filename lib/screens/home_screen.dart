@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:crypto/crypto.dart';
 import 'login_screen.dart';
 import '../widgets/common_widgets.dart';
 import 'festivelist_screen.dart';
@@ -16,9 +17,60 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // --- Wisdom Service ---
-
 class WisdomService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  
+  String _shlokaFingerprint(String shloka) {
+    final cleaned = shloka
+        .toLowerCase()
+        .replaceAll(RegExp(r'\p{M}', unicode: true), '')
+        .replaceAll(RegExp(r'[|॥।\s]+'), '')
+        .replaceAll(RegExp(r'[^\u0900-\u097Fa-z0-9]'), '');
+    final bytes = utf8.encode(cleaned);  
+    return sha256.convert(bytes).toString();
+  }
+
+  Future<bool> _isUniqueCandidate(String source, String fingerprint) async {
+    // 1. Exact source match
+    final sourceMatch = await _db
+        .collection('WisdomPool')
+        .where('Source', isEqualTo: source)
+        .limit(1)
+        .get();
+    if (sourceMatch.docs.isNotEmpty) {
+      debugPrint('[Dedup] Source already in pool: $source');
+      return false;
+    }
+
+    // 2. Normalised source match (catches "Adhyaya" vs "Chapter" etc.)
+    final allSources = await _db
+        .collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(500)           // large enough to cover 1+ year of daily entries
+        .get();
+    final normSource = _normalizeSource(source);
+    final sourceCollision = allSources.docs.any(
+        (doc) => _normalizeSource(doc['Source'] as String) == normSource);
+    if (sourceCollision) {
+      debugPrint('[Dedup] Normalised source collision: $source');
+      return false;
+    }
+
+    // 3. Shloka content fingerprint match — catches same verse / wrong numbers
+    if (fingerprint.isNotEmpty) {
+      final fpMatch = await _db
+          .collection('WisdomPool')
+          .where('ShlokaHash', isEqualTo: fingerprint)
+          .limit(1)
+          .get();
+      if (fpMatch.docs.isNotEmpty) {
+        debugPrint('[Dedup] ShlokaHash collision — same verse, different ref: $source');
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   Future<Map<String, dynamic>> getDailyWisdom() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -50,35 +102,53 @@ class WisdomService {
     if (preGenerated != null) {
       final data = Map<String, dynamic>.from(jsonDecode(preGenerated));
       final source = data['Source'] as String;
+      final fingerprint = _shlokaFingerprint(data['Shloka'] as String? ?? '');
 
-      // Check if already in pool (safety check)
-      final existingDoc = await _db.collection('WisdomPool')
+      // Check if already in pool by exact source
+      final existingDoc = await _db
+          .collection('WisdomPool')
           .where('Source', isEqualTo: source)
           .limit(1)
           .get();
 
       if (existingDoc.docs.isEmpty) {
-        // Officially write to WisdomPool now with proper Firestore types
-        final now = DateTime.now();
-        final expiryDate = now.add(const Duration(days: 730));
-        final Map<String, dynamic> poolData = {
-          'Source': source,
-          'Shloka': data['Shloka'],
-          'Meaning': data['Meaning'],
-          'Explanation': data['Explanation'],
-          'Date': today,
-          'CreatedAt': FieldValue.serverTimestamp(),
-          'DeleteAt': Timestamp.fromDate(expiryDate),
-        };
-        // FIX (Bug 4): Write to Firestore FIRST, then remove pre-cache.
-        // Previously the cache was deleted before the write, causing data
-        // loss on network failure.
-        await _db.collection('WisdomPool').doc(source).set(poolData);
-        await prefs.remove(preKey); // Safe to remove only after write succeeds
+        // HARDENED: Also check ShlokaHash before promoting to pool.
+        // Pre-cache was generated yesterday — by today the pool may already
+        // contain the same verse under a different (hallucinated) reference.
+        final fpMatch = await _db
+            .collection('WisdomPool')
+            .where('ShlokaHash', isEqualTo: fingerprint)
+            .limit(1)
+            .get();
 
-        // Clean local data for cache
-        data['CreatedAt'] = now.toIso8601String();
-        data['DeleteAt'] = expiryDate.toIso8601String();
+        if (fpMatch.docs.isNotEmpty) {
+          // Same shloka already in pool — discard pre-cache and fall through
+          // to Steps 1-4 which will pick a genuinely fresh entry.
+          debugPrint('[PreCache] ShlokaHash collision on promotion — discarding pre-cache.');
+          await prefs.remove(preKey);
+          // fall through — do NOT return here
+        } else {
+          // Safe to promote — write to pool with fingerprint
+          final now = DateTime.now();
+          final expiryDate = now.add(const Duration(days: 730));
+          final Map<String, dynamic> poolData = {
+            'Source': source,
+            'Shloka': data['Shloka'],
+            'ShlokaHash': fingerprint,   // ← content fingerprint stored
+            'Meaning': data['Meaning'],
+            'Explanation': data['Explanation'],
+            'Date': today,
+            'CreatedAt': FieldValue.serverTimestamp(),
+            'DeleteAt': Timestamp.fromDate(expiryDate),
+          };
+          // FIX (Bug 4): Write FIRST, remove cache only after write succeeds.
+          await _db.collection('WisdomPool').doc(source).set(poolData);
+          await prefs.remove(preKey);
+
+          data['CreatedAt'] = now.toIso8601String();
+          data['DeleteAt'] = expiryDate.toIso8601String();
+          return await _finalizeAndCache(user.uid, source, data, today, prefs);
+        }
       } else {
         // Already in pool — use existing data
         await prefs.remove(preKey);
@@ -91,10 +161,8 @@ class WisdomService {
           data['DeleteAt'] =
               (existingData['DeleteAt'] as Timestamp).toDate().toIso8601String();
         }
+        return await _finalizeAndCache(user.uid, source, data, today, prefs);
       }
-
-      // Finalize — update SeenWisdom, LastWisdomSource, LastWisdomDate
-      return await _finalizeAndCache(user.uid, source, data, today, prefs);
     }
 
     // --- STEP 1: LOCAL CACHE CHECK ---
@@ -175,7 +243,7 @@ class WisdomService {
     final poolSnapshot = await _db
         .collection('WisdomPool')
         .orderBy('CreatedAt', descending: true)
-        .limit(150)
+        .limit(500)  // covers full 1+ year of daily entries
         .get();
 
     final unseenDocs = poolSnapshot.docs.where((doc) {
@@ -235,7 +303,7 @@ class WisdomService {
       final poolSnapshot = await _db
           .collection('WisdomPool')
           .orderBy('CreatedAt', descending: true)
-          .limit(150)
+          .limit(500)  // covers full 1+ year of daily entries
           .get();
 
       final unseenDocs = poolSnapshot.docs.where((doc) {
@@ -264,13 +332,10 @@ class WisdomService {
         }
         tomorrowData = localData;
       } else {
-        final existingPool = await _db
-            .collection('WisdomPool')
-            .orderBy('CreatedAt', descending: true)
-            .limit(365)
-            .get();
+        // Pool exhausted for this user — generate fresh with AI.
+        // Re-use the poolSnapshot already fetched above (no extra Firestore read).
         final List<String> exclusionList =
-            existingPool.docs.map((d) => d['Source'] as String).toList();
+            poolSnapshot.docs.map((d) => d['Source'] as String).toList();
         tomorrowData = await _generateTomorrowLocally(
             user.uid, tomorrow, prefs, seenIds,
             exclusionList: exclusionList);
@@ -289,7 +354,19 @@ class WisdomService {
 
   // --- SHARED PROMPT BUILDER ---
   // Single source of truth for the prompt used in both generation functions.
-  String _buildWisdomPrompt(List<String> exclusionList) {
+  // exclusionList  — source reference strings already in the pool
+  // shlokaHints    — human-readable verse hints derived from stored shlokas,
+  //                  giving the AI a second layer of avoidance independent of
+  //                  reference numbers (guards against hallucinated refs).
+  String _buildWisdomPrompt(List<String> exclusionList,
+      {List<String> shlokaHints = const []}) {
+    final avoidanceBlock = shlokaHints.isEmpty
+        ? ''
+        : '''
+          ADDITIONAL SHLOKA AVOIDANCE (these exact verses must NOT be repeated,
+          regardless of how you number their reference):
+          ${shlokaHints.join('\n          ')}
+        ''';
     return """
           You are a Master Vedic Sage with access to the entire corpus of Indian Knowledge:
           1. The 4 Vedas: Rig, Sama, Yajur, and Atharva Veda.
@@ -302,6 +379,7 @@ class WisdomService {
           STRICT AVOIDANCE:
           The following references have already been shown to the user. You MUST NOT repeat any of them under any circumstance:
           $exclusionList
+          $avoidanceBlock
 
           TODAY'S SOURCE SELECTION (SILENT — NEVER PRINT THIS):
           Before selecting a verse, first silently choose which scripture to draw from today.
@@ -397,7 +475,7 @@ class WisdomService {
           ALWAYS prioritize diversity — rotate across the full corpus with every generation.
           ALWAYS maintain a tone that is wise, warm, and universally accessible.
           """;
-  }
+      }
 
   Future<Map<String, dynamic>?> _generateTomorrowLocally(
       String uid,
@@ -407,28 +485,54 @@ class WisdomService {
       {List<String>? exclusionList}) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
+    // Build exclusion list from pool if not provided
+    final poolSnapshot = await _db
+        .collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(500)
+        .get();
+
     final List<String> finalExclusionList = exclusionList ??
-        (await _db
-                .collection('WisdomPool')
-                .orderBy('CreatedAt', descending: true)
-                .limit(365)
-                .get())
-            .docs
-            .map((d) => d['Source'] as String)
-            .toList();
+        poolSnapshot.docs.map((d) => d['Source'] as String).toList();
 
-    final List<String> modelPriority = [
-      'gemini-3-flash-preview', 
-      'gemini-2.5-flash', 
-      'gemini-2.5-flash-lite'];
+    // LAYER 2 — collect first-line shloka hints to pass to the AI.
+    // Even if the AI ignores reference numbers, seeing the opening Sanskrit
+    // words of already-used verses gives it a second signal to avoid them.
+    final List<String> shlokaHints = poolSnapshot.docs
+        .map((d) {
+          final raw = (d.data()['Shloka'] as String? ?? '').trim();
+          // Send only the first ~60 chars — enough to identify the verse
+          return raw.length > 60 ? raw.substring(0, 60) : raw;
+        })
+        .where((s) => s.isNotEmpty)
+        .toList();
 
-    // FIX (Bug 2): Fetch saved shlokas ONCE before the loop, not inside it.
+    // Pre-fetch saved shlokas ONCE (Bug 2 fix)
     final savedSnapshot =
         await _db.collection('Users').doc(uid).collection('SavedShlokas').get();
     final Set<String> savedNormalized =
         savedSnapshot.docs.map((doc) => _normalizeSource(doc.id)).toSet();
 
-    final String prompt = _buildWisdomPrompt(finalExclusionList);
+    // Build all normalized sources & fingerprints already in pool for fast
+    // in-memory checks — avoids repeated Firestore reads inside the loop.
+    final Set<String> poolNormSources = poolSnapshot.docs
+        .map((d) => _normalizeSource(d['Source'] as String))
+        .toSet();
+    final Set<String> poolFingerprints = poolSnapshot.docs
+        .map((d) => (d.data()['ShlokaHash'] as String? ?? ''))
+        .where((h) => h.isNotEmpty)
+        .toSet();
+
+    final List<String> modelPriority = [
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+    ];
+
+    final String prompt = _buildWisdomPrompt(
+      finalExclusionList,
+      shlokaHints: shlokaHints,
+    );
 
     for (int attempt = 0; attempt < 3; attempt++) {
       for (String modelName in modelPriority) {
@@ -437,85 +541,76 @@ class WisdomService {
           final response = await model.generateContent([Content.text(prompt)]);
           final text = response.text;
 
-          if (text != null && text.contains('[SHLOK]')) {
-            final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          if (text == null || !text.contains('[SHLOK]')) continue;
 
-            // Digit enforcement
-            if (!RegExp(r'\d').hasMatch(source)) {
-              debugPrint("No numeric digits in reference. Retrying...");
-              continue;
-            }
+          final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          final shlokaText = _extractSection(text, '[SHLOK]', '[TRANSLATION]');
+          final fingerprint = _shlokaFingerprint(shlokaText);
 
-            if (finalExclusionList
-                .map(_normalizeSource)
-                .contains(_normalizeSource(source))) {
-              debugPrint("In exclusion list. Retrying...");
-              continue;
-            }
-
-            // FIX (Bug 2): Use pre-fetched set instead of in-loop read
-            if (savedNormalized.contains(_normalizeSource(source))) {
-              debugPrint("Already saved by user. Retrying...");
-              continue;
-            }
-
-            if (seenIds
-                .map((id) => _normalizeSource(id.toString()))
-                .contains(_normalizeSource(source))) {
-              debugPrint("Duplicate generated. Retrying...");
-              continue;
-            }
-
-            final existingDocs = await _db
-                .collection('WisdomPool')
-                .where('Source', isEqualTo: source)
-                .limit(1)
-                .get();
-
-            if (existingDocs.docs.isNotEmpty) {
-              final data = existingDocs.docs.first.data();
-              final Map<String, dynamic> localData =
-                  Map<String, dynamic>.from(data);
-              if (localData['CreatedAt'] is Timestamp) {
-                localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp)
-                    .toDate()
-                    .toIso8601String();
-              }
-              if (localData['DeleteAt'] is Timestamp) {
-                localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp)
-                    .toDate()
-                    .toIso8601String();
-              }
-              return localData;
-            }
-
-            final allRecent = await _db
-                .collection('WisdomPool')
-                .orderBy('CreatedAt', descending: true)
-                .limit(150)
-                .get();
-            if (allRecent.docs.any((doc) =>
-                _normalizeSource(doc['Source']) == _normalizeSource(source))) {
-              continue;
-            }
-
-            final now = DateTime.now();
-            final expiryDate = now.add(const Duration(days: 730));
-
-            final Map<String, dynamic> localData = {
-              'Source': source,
-              'Shloka': _extractSection(text, '[SHLOK]', '[TRANSLATION]'),
-              'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
-              'Explanation': _extractSection(text, '[PRACTICAL]', null),
-              'Date': tomorrow,
-              'CreatedAt': now.toIso8601String(),
-              'DeleteAt': expiryDate.toIso8601String(),
-            };
-
-            return localData;
+          // Gate 1: Must contain digits
+          if (!RegExp(r'\d').hasMatch(source)) {
+            debugPrint('[Gen-Tomorrow] No digits in reference. Retrying...');
+            continue;
           }
+
+          // Gate 2: In-memory exclusion list check (fast, no Firestore read)
+          if (finalExclusionList
+              .map(_normalizeSource)
+              .contains(_normalizeSource(source))) {
+            debugPrint('[Gen-Tomorrow] In exclusion list. Retrying...');
+            continue;
+          }
+
+          // Gate 3: In-memory normalised source collision
+          if (poolNormSources.contains(_normalizeSource(source))) {
+            debugPrint('[Gen-Tomorrow] Normalised source collision. Retrying...');
+            continue;
+          }
+
+          // Gate 4: In-memory fingerprint collision — same shloka / wrong ref
+          if (fingerprint.isNotEmpty && poolFingerprints.contains(fingerprint)) {
+            debugPrint('[Gen-Tomorrow] ShlokaHash collision in-memory. Retrying...');
+            continue;
+          }
+
+          // Gate 5: Saved by user
+          if (savedNormalized.contains(_normalizeSource(source))) {
+            debugPrint('[Gen-Tomorrow] Already saved by user. Retrying...');
+            continue;
+          }
+
+          // Gate 6: Already in SeenWisdom
+          if (seenIds
+              .map((id) => _normalizeSource(id.toString()))
+              .contains(_normalizeSource(source))) {
+            debugPrint('[Gen-Tomorrow] In SeenWisdom. Retrying...');
+            continue;
+          }
+
+          // Gate 7: Authoritative Firestore double-check (source + fingerprint)
+          final isUnique = await _isUniqueCandidate(source, fingerprint);
+          if (!isUnique) {
+            debugPrint('[Gen-Tomorrow] Firestore uniqueness check failed. Retrying...');
+            continue;
+          }
+
+          // All gates passed — build local data (NOT written to pool yet;
+          // that happens at promotion time in getDailyWisdom Step 0B).
+          final now = DateTime.now();
+          final expiryDate = now.add(const Duration(days: 730));
+
+          return {
+            'Source': source,
+            'Shloka': shlokaText,
+            'ShlokaHash': fingerprint,
+            'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
+            'Explanation': _extractSection(text, '[PRACTICAL]', null),
+            'Date': tomorrow,
+            'CreatedAt': now.toIso8601String(),
+            'DeleteAt': expiryDate.toIso8601String(),
+          };
         } catch (e) {
-          debugPrint("Model $modelName failed: $e");
+          debugPrint('[Gen-Tomorrow] Model $modelName failed: $e');
         }
       }
     }
@@ -677,28 +772,51 @@ class WisdomService {
       {List<String>? exclusionList}) async {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
+    // Fetch the full pool once — used for exclusion list, hints, and
+    // in-memory collision sets (avoids repeated Firestore reads in the loop).
+    final poolSnapshot = await _db
+        .collection('WisdomPool')
+        .orderBy('CreatedAt', descending: true)
+        .limit(500)
+        .get();
+
     final List<String> finalExclusionList = exclusionList ??
-        (await _db
-                .collection('WisdomPool')
-                .orderBy('CreatedAt', descending: true)
-                .limit(365)
-                .get())
-            .docs
-            .map((d) => d['Source'] as String)
-            .toList();
+        poolSnapshot.docs.map((d) => d['Source'] as String).toList();
 
-    final List<String> modelPriority = [
-      'gemini-3-flash-preview', 
-      'gemini-2.5-flash', 
-      'gemini-2.5-flash-lite'];
+    // LAYER 2 — first-line shloka hints sent to AI
+    final List<String> shlokaHints = poolSnapshot.docs
+        .map((d) {
+          final raw = (d.data()['Shloka'] as String? ?? '').trim();
+          return raw.length > 60 ? raw.substring(0, 60) : raw;
+        })
+        .where((s) => s.isNotEmpty)
+        .toList();
 
-    // FIX (Bug 2): Fetch saved shlokas ONCE before the loop, not inside it.
+    // Pre-fetch saved shlokas ONCE (Bug 2 fix)
     final savedSnapshot =
         await _db.collection('Users').doc(uid).collection('SavedShlokas').get();
     final Set<String> savedNormalized =
         savedSnapshot.docs.map((doc) => _normalizeSource(doc.id)).toSet();
 
-    final String prompt = _buildWisdomPrompt(finalExclusionList);
+    // In-memory collision sets for fast loop checks
+    final Set<String> poolNormSources = poolSnapshot.docs
+        .map((d) => _normalizeSource(d['Source'] as String))
+        .toSet();
+    final Set<String> poolFingerprints = poolSnapshot.docs
+        .map((d) => (d.data()['ShlokaHash'] as String? ?? ''))
+        .where((h) => h.isNotEmpty)
+        .toSet();
+
+    final List<String> modelPriority = [
+      'gemini-3-flash-preview',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+    ];
+
+    final String prompt = _buildWisdomPrompt(
+      finalExclusionList,
+      shlokaHints: shlokaHints,
+    );
 
     for (int attempt = 0; attempt < 3; attempt++) {
       for (String modelName in modelPriority) {
@@ -707,95 +825,85 @@ class WisdomService {
           final response = await model.generateContent([Content.text(prompt)]);
           final text = response.text;
 
-          if (text != null && text.contains('[SHLOK]')) {
-            final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          if (text == null || !text.contains('[SHLOK]')) continue;
 
-            // Digit enforcement
-            if (!RegExp(r'\d').hasMatch(source)) {
-              debugPrint("No numeric digits in reference. Retrying...");
-              continue;
-            }
+          final source = _extractSection(text, '[REFERENCE]', '[SHLOK]');
+          final shlokaText = _extractSection(text, '[SHLOK]', '[TRANSLATION]');
+          final fingerprint = _shlokaFingerprint(shlokaText);
 
-            if (finalExclusionList
-                .map(_normalizeSource)
-                .contains(_normalizeSource(source))) {
-              debugPrint("In exclusion list. Retrying...");
-              continue;
-            }
-
-            // FIX (Bug 2): Use pre-fetched set instead of in-loop read
-            if (savedNormalized.contains(_normalizeSource(source))) {
-              debugPrint("Already saved by user. Retrying...");
-              continue;
-            }
-
-            if (seenIds
-                .map((id) => _normalizeSource(id.toString()))
-                .contains(_normalizeSource(source))) {
-              debugPrint("Duplicate generated. Retrying...");
-              continue;
-            }
-
-            final existingDocs = await _db
-                .collection('WisdomPool')
-                .where('Source', isEqualTo: source)
-                .limit(1)
-                .get();
-
-            if (existingDocs.docs.isNotEmpty) {
-              final data = existingDocs.docs.first.data();
-              final Map<String, dynamic> localData =
-                  Map<String, dynamic>.from(data);
-              if (localData['CreatedAt'] is Timestamp) {
-                localData['CreatedAt'] = (localData['CreatedAt'] as Timestamp)
-                    .toDate()
-                    .toIso8601String();
-              }
-              if (localData['DeleteAt'] is Timestamp) {
-                localData['DeleteAt'] = (localData['DeleteAt'] as Timestamp)
-                    .toDate()
-                    .toIso8601String();
-              }
-              return await _finalizeAndCache(
-                  uid, source, localData, today, prefs);
-            }
-
-            final allRecent = await _db
-                .collection('WisdomPool')
-                .orderBy('CreatedAt', descending: true)
-                .limit(150)
-                .get();
-            if (allRecent.docs.any((doc) =>
-                _normalizeSource(doc['Source']) == _normalizeSource(source))) {
-              continue;
-            }
-
-            final now = DateTime.now();
-            final expiryDate = now.add(const Duration(days: 730));
-
-            final Map<String, dynamic> poolData = {
-              'Source': source,
-              'Shloka': _extractSection(text, '[SHLOK]', '[TRANSLATION]'),
-              'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
-              'Explanation': _extractSection(text, '[PRACTICAL]', null),
-              'Date': today,
-              'CreatedAt': FieldValue.serverTimestamp(),
-              'DeleteAt': Timestamp.fromDate(expiryDate),
-            };
-
-            await _db.collection('WisdomPool').doc(source).set(poolData);
-
-            final Map<String, dynamic> localData = {
-              ...poolData,
-              'CreatedAt': now.toIso8601String(),
-              'DeleteAt': expiryDate.toIso8601String(),
-            };
-
-            return await _finalizeAndCache(
-                uid, source, localData, today, prefs);
+          // Gate 1: Must contain digits
+          if (!RegExp(r'\d').hasMatch(source)) {
+            debugPrint('[Gen-New] No digits in reference. Retrying...');
+            continue;
           }
+
+          // Gate 2: Exclusion list
+          if (finalExclusionList
+              .map(_normalizeSource)
+              .contains(_normalizeSource(source))) {
+            debugPrint('[Gen-New] In exclusion list. Retrying...');
+            continue;
+          }
+
+          // Gate 3: In-memory normalised source collision
+          if (poolNormSources.contains(_normalizeSource(source))) {
+            debugPrint('[Gen-New] Normalised source collision. Retrying...');
+            continue;
+          }
+
+          // Gate 4: In-memory fingerprint collision
+          if (fingerprint.isNotEmpty && poolFingerprints.contains(fingerprint)) {
+            debugPrint('[Gen-New] ShlokaHash collision in-memory. Retrying...');
+            continue;
+          }
+
+          // Gate 5: Saved by user
+          if (savedNormalized.contains(_normalizeSource(source))) {
+            debugPrint('[Gen-New] Already saved by user. Retrying...');
+            continue;
+          }
+
+          // Gate 6: SeenWisdom
+          if (seenIds
+              .map((id) => _normalizeSource(id.toString()))
+              .contains(_normalizeSource(source))) {
+            debugPrint('[Gen-New] In SeenWisdom. Retrying...');
+            continue;
+          }
+
+          // Gate 7: Authoritative Firestore uniqueness check
+          final isUnique = await _isUniqueCandidate(source, fingerprint);
+          if (!isUnique) {
+            debugPrint('[Gen-New] Firestore uniqueness check failed. Retrying...');
+            continue;
+          }
+
+          // All gates passed — write to pool and return
+          final now = DateTime.now();
+          final expiryDate = now.add(const Duration(days: 730));
+
+          final Map<String, dynamic> poolData = {
+            'Source': source,
+            'Shloka': shlokaText,
+            'ShlokaHash': fingerprint,
+            'Meaning': _extractSection(text, '[TRANSLATION]', '[PRACTICAL]'),
+            'Explanation': _extractSection(text, '[PRACTICAL]', null),
+            'Date': today,
+            'CreatedAt': FieldValue.serverTimestamp(),
+            'DeleteAt': Timestamp.fromDate(expiryDate),
+          };
+
+          await _db.collection('WisdomPool').doc(source).set(poolData);
+
+          final Map<String, dynamic> localData = {
+            ...poolData,
+            'CreatedAt': now.toIso8601String(),
+            'DeleteAt': expiryDate.toIso8601String(),
+          };
+
+          return await _finalizeAndCache(uid, source, localData, today, prefs);
         } catch (e) {
-          debugPrint("Model $modelName failed: $e");
+          debugPrint('[Gen-New] Model $modelName failed: $e');
         }
       }
     }
